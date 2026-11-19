@@ -147,8 +147,14 @@ export const ApplicationsPage: React.FC = () => {
                           {/* Interactive Stage Transition Controls */}
                           <div className="card-stage-controls">
                             <div className="stage-select-wrapper">
-                              <label className="stage-select-label">Move stage:</label>
+                              <label
+                                htmlFor={`stage-select-${app.id}`}
+                                className="stage-select-label"
+                              >
+                                Move stage:
+                              </label>
                               <select
+                                id={`stage-select-${app.id}`}
                                 className="stage-select"
                                 value={app.stage}
                                 onChange={(e) =>

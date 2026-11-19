@@ -155,6 +155,20 @@ export const ScholarshipDetailPage: React.FC = () => {
 
   // Apply What-If proposed values to persistent profile (Figure 12)
   const handleApplyWhatIfToPersistentProfile = () => {
+    // Validate simulated inputs with the same profile rules as ProfilePage
+    if (simulatedCgpa < 0 || simulatedCgpa > 4.0) {
+      alert("Invalid What-If value: CGPA must be between 0.00 and 4.00.");
+      return;
+    }
+    if (simulatedIncome !== null && simulatedIncome < 0) {
+      alert("Invalid What-If value: Household income cannot be negative.");
+      return;
+    }
+    if (!simulatedField.trim()) {
+      alert("Invalid What-If value: Field of study cannot be empty.");
+      return;
+    }
+
     if (
       window.confirm(
         "Apply these proposed what-if values to your permanent profile? This will update your profile across ScholarPal."
@@ -165,7 +179,7 @@ export const ScholarshipDetailPage: React.FC = () => {
         cgpa: simulatedCgpa,
         household_income: simulatedIncome,
         study_level: simulatedStudyLevel,
-        field_of_study: simulatedField,
+        field_of_study: simulatedField.trim(),
       };
       saveStoredProfile(newPersistentProfile);
       setProfile(newPersistentProfile);

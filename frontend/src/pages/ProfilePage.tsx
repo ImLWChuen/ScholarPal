@@ -24,6 +24,9 @@ export const ProfilePage: React.FC = () => {
   const [academicResults, setAcademicResults] = useState<[string, string][]>(
     Object.entries(profile.academic_results)
   );
+  const [cgpaDraft, setCgpaDraft] = useState<string>(
+    profile.cgpa != null ? profile.cgpa.toString() : ""
+  );
   const [newSubject, setNewSubject] = useState("");
   const [newGrade, setNewGrade] = useState("A");
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -52,8 +55,21 @@ export const ProfilePage: React.FC = () => {
 
   const handleAddSubject = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSubject.trim()) return;
-    setAcademicResults((prev) => [...prev, [newSubject.trim(), newGrade]]);
+    const trimmed = newSubject.trim();
+    if (!trimmed) return;
+
+    // Check against existing subjects (case-insensitive) to prevent duplicate rows
+    const existingIndex = academicResults.findIndex(
+      ([subj]) => subj.toLowerCase() === trimmed.toLowerCase()
+    );
+
+    if (existingIndex >= 0) {
+      const updated = [...academicResults];
+      updated[existingIndex][1] = newGrade;
+      setAcademicResults(updated);
+    } else {
+      setAcademicResults((prev) => [...prev, [trimmed, newGrade]]);
+    }
     setNewSubject("");
     setSaveSuccess(false);
   };
@@ -62,11 +78,17 @@ export const ProfilePage: React.FC = () => {
     e.preventDefault();
     setValidationError(null);
 
-    // Validation
-    if (profile.cgpa < 0 || profile.cgpa > 4.0) {
-      setValidationError("CGPA must be between 0.00 and 4.00.");
+    // Validate CGPA: reject empty string, accept valid numbers between 0.00 and 4.00 (including explicit 0)
+    if (cgpaDraft.trim() === "") {
+      setValidationError("CGPA is required and cannot be empty.");
       return;
     }
+    const parsedCgpa = parseFloat(cgpaDraft);
+    if (isNaN(parsedCgpa) || parsedCgpa < 0 || parsedCgpa > 4.0) {
+      setValidationError("CGPA must be a valid number between 0.00 and 4.00.");
+      return;
+    }
+
     if (profile.household_income !== null && profile.household_income < 0) {
       setValidationError("Household income cannot be negative.");
       return;
@@ -79,6 +101,7 @@ export const ProfilePage: React.FC = () => {
 
     const updatedProfile: MockStudentProfile = {
       ...profile,
+      cgpa: parsedCgpa,
       academic_results: resultsObj,
     };
 
@@ -92,6 +115,7 @@ export const ProfilePage: React.FC = () => {
     if (window.confirm("Reset profile back to default demo student data?")) {
       saveStoredProfile(INITIAL_STUDENT_PROFILE);
       setProfile(INITIAL_STUDENT_PROFILE);
+      setCgpaDraft(INITIAL_STUDENT_PROFILE.cgpa.toString());
       setAcademicResults(Object.entries(INITIAL_STUDENT_PROFILE.academic_results));
       setSaveSuccess(false);
       setValidationError(null);
@@ -145,8 +169,11 @@ export const ProfilePage: React.FC = () => {
         {/* Left Card: Academic & Identity Credentials */}
         <Card title="Personal & Academic Parameters" subtitle="Evaluated directly against scholarship criteria">
           <div className="form-group">
-            <label className="form-label">Full Name</label>
+            <label htmlFor="profile-full-name" className="form-label">
+              Full Name
+            </label>
             <Input
+              id="profile-full-name"
               value={profile.full_name}
               onChange={(e) => handleProfileChange("full_name", e.target.value)}
               required
@@ -154,8 +181,11 @@ export const ProfilePage: React.FC = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Email Address</label>
+            <label htmlFor="profile-email" className="form-label">
+              Email Address
+            </label>
             <Input
+              id="profile-email"
               type="email"
               value={profile.email}
               onChange={(e) => handleProfileChange("email", e.target.value)}
@@ -165,8 +195,11 @@ export const ProfilePage: React.FC = () => {
 
           <div className="form-row-2">
             <div className="form-group">
-              <label className="form-label">Nationality / Citizenship</label>
+              <label htmlFor="profile-nationality" className="form-label">
+                Nationality / Citizenship
+              </label>
               <select
+                id="profile-nationality"
                 className="form-select"
                 value={profile.nationality}
                 onChange={(e) => {
@@ -180,8 +213,11 @@ export const ProfilePage: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">State of Origin</label>
+              <label htmlFor="profile-state" className="form-label">
+                State of Origin
+              </label>
               <Input
+                id="profile-state"
                 value={profile.state_of_origin}
                 onChange={(e) => handleProfileChange("state_of_origin", e.target.value)}
               />
@@ -190,8 +226,11 @@ export const ProfilePage: React.FC = () => {
 
           <div className="form-row-2">
             <div className="form-group">
-              <label className="form-label">Current Study Level</label>
+              <label htmlFor="profile-study-level" className="form-label">
+                Current Study Level
+              </label>
               <select
+                id="profile-study-level"
                 className="form-select"
                 value={profile.study_level}
                 onChange={(e) => handleProfileChange("study_level", e.target.value)}
@@ -204,14 +243,20 @@ export const ProfilePage: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Current Undergraduate / Pre-U CGPA</label>
+              <label htmlFor="profile-cgpa" className="form-label">
+                Current Undergraduate / Pre-U CGPA
+              </label>
               <Input
+                id="profile-cgpa"
                 type="number"
                 step="0.01"
                 min="0.00"
                 max="4.00"
-                value={profile.cgpa}
-                onChange={(e) => handleProfileChange("cgpa", parseFloat(e.target.value) || 0)}
+                value={cgpaDraft}
+                onChange={(e) => {
+                  setCgpaDraft(e.target.value);
+                  setSaveSuccess(false);
+                }}
                 required
               />
               <span className="form-help">Scale 0.00 to 4.00</span>
@@ -219,8 +264,11 @@ export const ProfilePage: React.FC = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Field of Study</label>
+            <label htmlFor="profile-field" className="form-label">
+              Field of Study
+            </label>
             <Input
+              id="profile-field"
               value={profile.field_of_study}
               onChange={(e) => handleProfileChange("field_of_study", e.target.value)}
               placeholder="e.g. Computer Science, Mechanical Engineering"
@@ -229,8 +277,11 @@ export const ProfilePage: React.FC = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Intended Future Field / Specialisation</label>
+            <label htmlFor="profile-intended-field" className="form-label">
+              Intended Future Field / Specialisation
+            </label>
             <Input
+              id="profile-intended-field"
               value={profile.intended_field}
               onChange={(e) => handleProfileChange("intended_field", e.target.value)}
               placeholder="e.g. Artificial Intelligence, Renewable Energy"
@@ -246,10 +297,13 @@ export const ProfilePage: React.FC = () => {
             subtitle="Rule 5: Client-side privacy for need-based scholarship priority"
           >
             <div className="form-group">
-              <label className="form-label">Monthly Gross Household Income (MYR)</label>
+              <label htmlFor="profile-income" className="form-label">
+                Monthly Gross Household Income (MYR)
+              </label>
               <Input
+                id="profile-income"
                 type="number"
-                step="100"
+                step="any"
                 min="0"
                 value={profile.household_income !== null ? profile.household_income : ""}
                 onChange={(e) => {
@@ -314,7 +368,9 @@ export const ProfilePage: React.FC = () => {
             {/* Add Subject Mini Form */}
             <div className="add-subject-row">
               <Input
+                id="profile-new-subject"
                 placeholder="Add subject (e.g. Additional Mathematics)"
+                aria-label="Add subject name"
                 value={newSubject}
                 onChange={(e) => setNewSubject(e.target.value)}
                 style={{ flex: 1 }}

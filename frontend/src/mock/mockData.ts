@@ -267,9 +267,9 @@ export const INITIAL_SCHOLARSHIPS: MockScholarship[] = [
     requirements: [
       {
         id: "req-pet-1",
-        type: "academic_cgpa",
+        type: "academic_cgpa_or_spm",
         operator: "gte",
-        value: 3.5,
+        value: { cgpa: 3.5, spm_a_count: 8 },
         is_mandatory: true,
         source_excerpt: "Minimum current CGPA 3.50 or minimum 8A's in SPM examination.",
         description: "Minimum CGPA 3.50 or 8A's in SPM",
@@ -548,7 +548,23 @@ export const INITIAL_APPLICATIONS: MockApplication[] = [
     student_id: "usr-demo-1",
     stage: ApplicationStage.SAVED,
     notes: "Saved to explore when applications open in January 2027.",
-    checklist: [],
+    checklist: [
+      {
+        required_document_id: "doc-bnm-1",
+        name: "SPM Certificate and Detailed Statement",
+        is_ready: false,
+      },
+      {
+        required_document_id: "doc-bnm-2",
+        name: "National Co-Curricular Assessment Report",
+        is_ready: false,
+      },
+      {
+        required_document_id: "doc-bnm-3",
+        name: "Personal Essay: Monetary Policy & Digital Economy",
+        is_ready: false,
+      },
+    ],
     tasks: [],
   },
 ];
@@ -559,7 +575,7 @@ export const INITIAL_INTERVIEWS: MockInterview[] = [
     application_id: "app-1",
     scholarship_title: "Yayasan Khazanah Global Scholarship 2026",
     round_name: "Virtual Leadership Assessment & Panel Interview",
-    scheduled_at: "2026-11-25T10:00:00",
+    scheduled_at: "2026-11-25T10:00:00+08:00",
     duration_minutes: 90, // 10:00 AM - 11:30 AM
     location_or_link: "https://zoom.us/j/9812498129 (Passcode: KHZ2026)",
     status: "Confirmed",
@@ -570,7 +586,7 @@ export const INITIAL_INTERVIEWS: MockInterview[] = [
     application_id: "app-3",
     scholarship_title: "JPA Program Ijazah Dalam Negara (PIDN) 2026",
     round_name: "JPA State Selection Board Interview",
-    scheduled_at: "2026-11-25T11:00:00", // 11:00 AM - 12:00 PM -> OVERLAPS with int-1 (10:00 - 11:30)!
+    scheduled_at: "2026-11-25T11:00:00+08:00", // 11:00 AM - 12:00 PM -> OVERLAPS with int-1 (10:00 - 11:30)!
     duration_minutes: 60,
     location_or_link: "Bilik Temuduga 4, Kompleks C, Putrajaya / Webex JPA",
     status: "Confirmed",
@@ -790,6 +806,52 @@ export function evaluateEligibility(
       } else {
         outcome = RequirementOutcome.UNMET;
         reason = `Field (${profile.field_of_study}) is not within listed disciplines.`;
+      }
+    } else if (req.type === "academic_spm") {
+      // Objective grade-count evaluation (e.g. BNM minimum 8 qualifying A/A+ grades)
+      if (!profile.academic_results || Object.keys(profile.academic_results).length === 0) {
+        outcome = RequirementOutcome.UNRESOLVED;
+        reason = "SPM academic results not recorded in profile.";
+      } else {
+        const qualifyingCount = Object.values(profile.academic_results).filter(
+          (grade) => grade === "A+" || grade === "A"
+        ).length;
+        const requiredCount = typeof req.value === "number" ? req.value : 8;
+
+        if (qualifyingCount >= requiredCount) {
+          outcome = RequirementOutcome.SATISFIED;
+          reason = `Student has ${qualifyingCount} qualifying A/A+ grades, meeting required minimum of ${requiredCount}.`;
+        } else {
+          outcome = RequirementOutcome.UNMET;
+          reason = `Student has ${qualifyingCount} qualifying A/A+ grades, below required minimum of ${requiredCount}.`;
+        }
+      }
+    } else if (req.type === "academic_cgpa_or_spm") {
+      // Dual qualifying alternatives: CGPA >= 3.50 OR at least 8 A/A+ SPM grades
+      const targetCgpa = typeof req.value === "object" && req.value?.cgpa != null ? req.value.cgpa : 3.5;
+      const targetSpmA = typeof req.value === "object" && req.value?.spm_a_count != null ? req.value.spm_a_count : 8;
+
+      const cgpaSatisfied = profile.cgpa != null && profile.cgpa >= targetCgpa;
+      const qualifyingSpmCount = profile.academic_results
+        ? Object.values(profile.academic_results).filter((g) => g === "A+" || g === "A").length
+        : 0;
+      const spmSatisfied = qualifyingSpmCount >= targetSpmA;
+
+      if (cgpaSatisfied || spmSatisfied) {
+        outcome = RequirementOutcome.SATISFIED;
+        if (cgpaSatisfied && spmSatisfied) {
+          reason = `Student qualifies via both CGPA (${profile.cgpa.toFixed(2)} >= ${targetCgpa.toFixed(2)}) and SPM (${qualifyingSpmCount} >= ${targetSpmA} A/A+).`;
+        } else if (cgpaSatisfied) {
+          reason = `Student qualifies via CGPA track (${profile.cgpa.toFixed(2)} >= required ${targetCgpa.toFixed(2)}).`;
+        } else {
+          reason = `Student qualifies via SPM track (${qualifyingSpmCount} A/A+ >= required ${targetSpmA}).`;
+        }
+      } else if (profile.cgpa == null && (!profile.academic_results || Object.keys(profile.academic_results).length === 0)) {
+        outcome = RequirementOutcome.UNRESOLVED;
+        reason = "Neither CGPA nor SPM academic results recorded in profile.";
+      } else {
+        outcome = RequirementOutcome.UNMET;
+        reason = `Student does not meet either alternative (CGPA: ${profile.cgpa != null ? profile.cgpa.toFixed(2) : "N/A"} < ${targetCgpa.toFixed(2)}; SPM A/A+: ${qualifyingSpmCount} < ${targetSpmA}).`;
       }
     } else {
       // Subjective criteria (e.g. leadership) - Rule 2: Subjective criteria never auto-verified

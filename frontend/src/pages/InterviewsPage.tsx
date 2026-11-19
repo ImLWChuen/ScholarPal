@@ -4,8 +4,12 @@ import {
   getStoredInterviews,
   saveStoredInterviews,
   getStoredScholarships,
+  getStoredApplications,
+  saveStoredApplications,
   MockInterview,
+  MockApplication,
 } from "../mock/mockData";
+import { ApplicationStage } from "../types";
 import { Card, Button, Input, Badge } from "../components/ui";
 import {
   Calendar,
@@ -39,6 +43,14 @@ export const InterviewsPage: React.FC = () => {
     setInterviews(getStoredInterviews());
   }, []);
 
+  // Normalizes offset-free timestamps to intended Malaysian Standard Time (UTC+8)
+  const parseInterviewTimestamp = (ts: string): number => {
+    if (!ts.includes("Z") && !/[+-]\d{2}:?\d{2}$/.test(ts)) {
+      return new Date(`${ts}+08:00`).getTime();
+    }
+    return new Date(ts).getTime();
+  };
+
   // Algorithm to detect overlapping scheduled interviews
   const detectOverlaps = () => {
     const conflicts: {
@@ -53,10 +65,10 @@ export const InterviewsPage: React.FC = () => {
         const int1 = interviews[i];
         const int2 = interviews[j];
 
-        const start1 = new Date(int1.scheduled_at).getTime();
+        const start1 = parseInterviewTimestamp(int1.scheduled_at);
         const end1 = start1 + int1.duration_minutes * 60 * 1000;
 
-        const start2 = new Date(int2.scheduled_at).getTime();
+        const start2 = parseInterviewTimestamp(int2.scheduled_at);
         const end2 = start2 + int2.duration_minutes * 60 * 1000;
 
         // Overlap condition: start1 < end2 && start2 < end1
@@ -77,9 +89,39 @@ export const InterviewsPage: React.FC = () => {
 
   const handleAddInterview = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Resolve application_id: match scholarship or auto-track in INTERVIEW stage
+    const matchedScholarship = scholarships.find((s) => s.title === newScholarshipTitle);
+    const storedApps = getStoredApplications();
+    const existingApp = storedApps.find((a) => a.scholarship_id === matchedScholarship?.id);
+
+    let resolvedAppId = existingApp?.id;
+    if (!resolvedAppId) {
+      resolvedAppId = `app-auto-${Date.now()}`;
+      const newApp: MockApplication = {
+        id: resolvedAppId,
+        scholarship_id: matchedScholarship?.id || "sch-custom",
+        student_id: "usr-demo-1",
+        stage: ApplicationStage.INTERVIEW,
+        checklist: (matchedScholarship?.required_documents || []).map((doc) => ({
+          required_document_id: doc.id,
+          name: doc.name,
+          is_ready: false,
+        })),
+        tasks: [
+          {
+            id: `tsk-int-${Date.now()}`,
+            title: `Prepare for ${newRound}`,
+            is_completed: false,
+          },
+        ],
+      };
+      saveStoredApplications([...storedApps, newApp]);
+    }
+
     const newInt: MockInterview = {
       id: `int-${Date.now()}`,
-      application_id: "app-custom",
+      application_id: resolvedAppId,
       scholarship_title: newScholarshipTitle,
       round_name: newRound,
       scheduled_at: new Date(newScheduledAt).toISOString(),
@@ -168,8 +210,11 @@ export const InterviewsPage: React.FC = () => {
           <form onSubmit={handleAddInterview} className="add-interview-form">
             <div className="form-row-2">
               <div className="form-group">
-                <label className="form-label">Scholarship / Sponsor</label>
+                <label htmlFor="interview-scholarship" className="form-label">
+                  Scholarship / Sponsor
+                </label>
                 <select
+                  id="interview-scholarship"
                   className="form-select"
                   value={newScholarshipTitle}
                   onChange={(e) => setNewScholarshipTitle(e.target.value)}
@@ -186,8 +231,11 @@ export const InterviewsPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Interview Round / Stage Name</label>
+                <label htmlFor="interview-round" className="form-label">
+                  Interview Round / Stage Name
+                </label>
                 <Input
+                  id="interview-round"
                   value={newRound}
                   onChange={(e) => setNewRound(e.target.value)}
                   placeholder="e.g. Assessment Center Group Case Study"
@@ -198,8 +246,11 @@ export const InterviewsPage: React.FC = () => {
 
             <div className="form-row-3">
               <div className="form-group">
-                <label className="form-label">Date & Time</label>
+                <label htmlFor="interview-scheduled-at" className="form-label">
+                  Date & Time
+                </label>
                 <Input
+                  id="interview-scheduled-at"
                   type="datetime-local"
                   value={newScheduledAt}
                   onChange={(e) => setNewScheduledAt(e.target.value)}
@@ -208,8 +259,11 @@ export const InterviewsPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Duration (Minutes)</label>
+                <label htmlFor="interview-duration" className="form-label">
+                  Duration (Minutes)
+                </label>
                 <Input
+                  id="interview-duration"
                   type="number"
                   min="15"
                   step="15"
@@ -220,8 +274,11 @@ export const InterviewsPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Venue / Virtual Video Link</label>
+                <label htmlFor="interview-location" className="form-label">
+                  Venue / Virtual Video Link
+                </label>
                 <Input
+                  id="interview-location"
                   value={newLocation}
                   onChange={(e) => setNewLocation(e.target.value)}
                   placeholder="e.g. Zoom / Menara TM KL"
@@ -231,8 +288,11 @@ export const InterviewsPage: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Preparation Notes / Focus Areas</label>
+              <label htmlFor="interview-notes" className="form-label">
+                Preparation Notes / Focus Areas
+              </label>
               <Input
+                id="interview-notes"
                 value={newPrepNotes}
                 onChange={(e) => setNewPrepNotes(e.target.value)}
                 placeholder="Key talking points or case preparation topics"
