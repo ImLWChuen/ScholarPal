@@ -1,12 +1,28 @@
-.PHONY: help dev dev-backend dev-frontend test test-backend test-frontend migrate migrate-create lint lint-backend lint-frontend
+.PHONY: help dev dev-backend dev-frontend test test-backend test-frontend migrate migrate-create lint lint-backend lint-frontend docker-up docker-down docker-logs seed
 
 help:
 	@echo "ScholarPal Monorepo Automation"
 	@echo "Usage:"
-	@echo "  make dev          Start backend and frontend development servers"
+	@echo "  make docker-up    Start entire stack via Docker Compose (db, backend, scheduler, frontend)"
+	@echo "  make docker-down  Stop all Docker Compose services"
+	@echo "  make docker-logs  Follow live logs from all containers"
+	@echo "  make dev          Start local backend and frontend development servers"
+	@echo "  make seed         Seed database with sample scholarships, rules, and demo records"
 	@echo "  make test         Run backend tests (pytest) and frontend checks"
 	@echo "  make migrate      Apply database migrations via Alembic"
 	@echo "  make lint         Run linting (ruff for backend, tsc for frontend)"
+
+docker-up:
+	docker-compose up --build -d
+
+docker-down:
+	docker-compose down
+
+docker-logs:
+	docker-compose logs -f
+
+seed:
+	cd backend && python -m app.core.seed
 
 dev:
 	@echo "Starting backend and frontend dev servers..."
