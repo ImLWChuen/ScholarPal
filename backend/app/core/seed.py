@@ -16,7 +16,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy import select
 
-from app.core.db import AsyncSessionLocal, Base, engine
+from app.core.db import AsyncSessionLocal
 from app.domain.comparison.models import ComparisonSet
 from app.domain.eligibility_impact.models import EligibilityRule
 from app.domain.profile_preparation.models import StudentProfile
@@ -136,12 +136,8 @@ DEMO_COMPARISON_SET = {
 
 
 async def seed_data() -> None:
-    """Creates tables if missing and inserts baseline seed data."""
-    logger.info("Initializing database connection...")
-    async with engine.begin() as conn:
-        # Ensure schema tables exist
-        await conn.run_sync(Base.metadata.create_all)
-
+    """Inserts baseline seed data into existing tables."""
+    logger.info("Initializing database session for seed data...")
     async with AsyncSessionLocal() as session:
         # 1. Seed Scholarships
         for item in SAMPLE_SCHOLARSHIPS:
