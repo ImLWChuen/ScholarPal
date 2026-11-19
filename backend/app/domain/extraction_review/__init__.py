@@ -1,4 +1,41 @@
-from app.domain.extraction_review.models import ExtractionReview
-from app.domain.extraction_review.schemas import ExtractionReviewBase, ReviewStatus
+from app.domain.extraction_review.models import (
+    EvidenceCheck,
+    ExtractionReview,
+    RequiredDocument,
+)
+from app.domain.extraction_review.schemas import (
+    EvidenceCheckBase,
+    EvidenceCheckCreate,
+    EvidenceCheckRead,
+    EvidenceCheckUpdate,
+    EvidenceLabel,
+    ExtractionReviewBase,
+    ExtractionReviewCreate,
+    ExtractionReviewRead,
+    ExtractionReviewUpdate,
+    RequiredDocumentBase,
+    RequiredDocumentCreate,
+    RequiredDocumentRead,
+    RequiredDocumentUpdate,
+    ReviewStatus,
+)
 
-__all__ = ["ExtractionReview", "ExtractionReviewBase", "ReviewStatus"]
+__all__ = [
+    "RequiredDocument",
+    "EvidenceCheck",
+    "ExtractionReview",
+    "EvidenceLabel",
+    "ReviewStatus",
+    "RequiredDocumentBase",
+    "RequiredDocumentCreate",
+    "RequiredDocumentRead",
+    "RequiredDocumentUpdate",
+    "EvidenceCheckBase",
+    "EvidenceCheckCreate",
+    "EvidenceCheckRead",
+    "EvidenceCheckUpdate",
+    "ExtractionReviewBase",
+    "ExtractionReviewCreate",
+    "ExtractionReviewRead",
+    "ExtractionReviewUpdate",
+]

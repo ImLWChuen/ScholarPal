@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "vite --strictPort",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate:types": "python ../scripts/openapi_to_typescript.py"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.108.0",

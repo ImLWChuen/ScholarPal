@@ -9,44 +9,109 @@ overall result is:
 Non-negotiable rule 6: What-if checks never modify saved data (ephemeral evaluation).
 """
 
-from enum import Enum
+from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.domain.shared_enums import (
+    OverallEligibility,
+    RequirementOutcome,
+)
+
+# Backward-compatibility aliases
+RequirementState = RequirementOutcome
+OverallEligibilityResult = OverallEligibility
 
 
-class RequirementState(str, Enum):
-    SATISFIED = "satisfied"
-    UNMET = "unmet"
-    UNRESOLVED = "unresolved"
+# ---------------------------------------------------------------------------
+# Requirement Schemas
+# ---------------------------------------------------------------------------
+class RequirementBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    scholarship_version_id: str
+    type: str = Field(
+        ...,
+        description="Requirement dimension e.g. academic_cgpa, nationality, study_level",
+    )
+    operator: str = Field(..., description="Comparison operator: eq, gte, lte, in, contains")
+    value: Any = Field(..., description="Target threshold or qualifying criterion")
+    is_mandatory: bool = True
+    source_excerpt: str | None = None
+    is_subjective: bool = False
 
 
-class OverallEligibilityResult(str, Enum):
-    DOES_NOT_MEET = "Does not meet recorded requirements"
-    NEEDS_CLARIFICATION = "Needs clarification"
-    MEETS_REQUIREMENTS = "Meets recorded requirements"
+class RequirementCreate(RequirementBase):
+    id: str | None = None
 
 
+class RequirementUpdate(BaseModel):
+    type: str | None = None
+    operator: str | None = None
+    value: Any | None = None
+    is_mandatory: bool | None = None
+    source_excerpt: str | None = None
+    is_subjective: bool | None = None
+
+
+class RequirementRead(RequirementBase):
+    id: str
+    created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Evaluation & Simulation Schemas
+# ---------------------------------------------------------------------------
 class RequirementEvaluation(BaseModel):
     requirement_id: str
     criterion_name: str
     is_mandatory: bool = True
-    state: RequirementState
+    state: RequirementOutcome
     reason: str
+
+
+class EligibilityEvaluationRequest(BaseModel):
+    scholarship_id: str
+    student_id: str | None = None
+    # For ephemeral what-if simulation (Rule 6: Never modifies saved data)
+    simulation_profile: dict[str, Any] | None = None
 
 
 class EligibilityEvaluationResult(BaseModel):
     scholarship_id: str
     student_id: str
-    overall_result: OverallEligibilityResult
+    overall_result: OverallEligibility
     evaluations: list[RequirementEvaluation]
     is_simulation: bool = False  # Rule 6: What-if checks are ephemeral simulations
+    evaluated_at: datetime | None = None
 
 
+# ---------------------------------------------------------------------------
+# Legacy Compatibility Models
+# ---------------------------------------------------------------------------
 class EligibilityRuleBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     scholarship_id: str
     criterion_code: str
-    rule_type: str  # e.g., min_cgpa, household_income_max, state, nationality
-    rule_parameters: dict
+    rule_type: str
+    rule_parameters: dict[str, Any]
     is_mandatory: bool = True
+
+
+class EligibilityRuleCreate(EligibilityRuleBase):
+    id: str | None = None
+
+
+class EligibilityRuleUpdate(BaseModel):
+    criterion_code: str | None = None
+    rule_type: str | None = None
+    rule_parameters: dict[str, Any] | None = None
+    is_mandatory: bool | None = None
+
+
+class EligibilityRuleRead(EligibilityRuleBase):
+    id: str

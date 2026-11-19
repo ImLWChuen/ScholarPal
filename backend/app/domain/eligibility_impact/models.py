@@ -16,6 +16,7 @@ from sqlalchemy import (
     ForeignKey,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -63,7 +64,14 @@ class Requirement(Base):
         "ScholarshipVersion", back_populates="requirements"
     )
     evidence_checks: Mapped[list[EvidenceCheck]] = relationship(
-        "EvidenceCheck", back_populates="requirement", cascade="all, delete-orphan"
+        "EvidenceCheck",
+        back_populates="requirement",
+        cascade="all, delete-orphan",
+        overlaps="evidence_checks,scholarship_version",
+    )
+
+    __table_args__ = (
+        UniqueConstraint("scholarship_version_id", "id", name="uq_requirements_version_id"),
     )
 
 

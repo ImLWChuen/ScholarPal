@@ -18,7 +18,9 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    event,
     func,
+    select,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -75,7 +77,6 @@ class Retrieval(Base):
     status: Mapped[str] = mapped_column(String, default="pending", nullable=False, index=True)
     http_status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # Content hash prevents duplicate re-processing of identical portal pages
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     retrieved_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
@@ -88,6 +89,36 @@ class Retrieval(Base):
     )
 
     __table_args__ = (Index("ix_retrievals_source_url_hash", "source_id", "url", "content_hash"),)
+
+
+class RetrievalProcessingClaim(Base):
+    """
+    Atomic processing claim record at the crawler processing boundary.
+    Enforces uniqueness for (source_id, url, content_hash) to guarantee
+    that duplicate updates with identical non-null content hashes are not re-processed.
+    """
+
+    __tablename__ = "retrieval_processing_claims"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    source_id: Mapped[str] = mapped_column(
+        String, ForeignKey("sources.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    url: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    claimed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "source_id",
+            "url",
+            "content_hash",
+            name="uq_retrieval_processing_claims",
+        ),
+    )
 
 
 class Scholarship(Base):
@@ -123,8 +154,9 @@ class Scholarship(Base):
 
 class ScholarshipVersion(Base):
     """
-    Immutable version representing a published or under-review scholarship snapshot.
-    Uniqueness across (scholarship_id, application_cycle, version_number) prevents duplicates.
+    Revision snapshot representing a published or under-review scholarship specification.
+    uq_scholarship_cycle_version enforces unique version numbers per cycle.
+    Immutability of approved versions is enforced by the before_update event listener.
     """
 
     __tablename__ = "scholarship_versions"
@@ -166,7 +198,10 @@ class ScholarshipVersion(Base):
         "RequiredDocument", back_populates="scholarship_version", cascade="all, delete-orphan"
     )
     evidence_checks: Mapped[list[EvidenceCheck]] = relationship(
-        "EvidenceCheck", back_populates="scholarship_version", cascade="all, delete-orphan"
+        "EvidenceCheck",
+        back_populates="scholarship_version",
+        cascade="all, delete-orphan",
+        overlaps="evidence_checks,requirement",
     )
 
     __table_args__ = (
@@ -177,3 +212,39 @@ class ScholarshipVersion(Base):
             name="uq_scholarship_cycle_version",
         ),
     )
+
+
+@event.listens_for(ScholarshipVersion, "before_update")
+def enforce_approved_version_immutability(
+    mapper: Any, connection: Any, target: ScholarshipVersion
+) -> None:
+    """
+    Prevents modifying content fields of an approved version snapshot.
+    Review transitions on unapproved versions remain permitted.
+    """
+    stmt = select(
+        ScholarshipVersion.status,
+        ScholarshipVersion.title,
+        ScholarshipVersion.description,
+        ScholarshipVersion.coverage_details,
+        ScholarshipVersion.deadline,
+        ScholarshipVersion.application_cycle,
+        ScholarshipVersion.version_number,
+        ScholarshipVersion.raw_extracted_data,
+    ).where(ScholarshipVersion.id == target.id)
+    prev = connection.execute(stmt).first()
+    if prev and prev[0] == VersionStatus.APPROVED.value:
+        content_changed = (
+            target.title != prev[1]
+            or target.description != prev[2]
+            or target.coverage_details != prev[3]
+            or target.deadline != prev[4]
+            or target.application_cycle != prev[5]
+            or target.version_number != prev[6]
+            or target.raw_extracted_data != prev[7]
+        )
+        if content_changed:
+            raise ValueError(
+                f"Approved scholarship version '{target.id}' is immutable. "
+                "Content modifications must be published as a new version."
+            )

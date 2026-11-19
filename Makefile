@@ -1,19 +1,20 @@
-.PHONY: help dev dev-backend dev-frontend test test-backend test-frontend migrate migrate-create lint lint-backend lint-frontend docker-up docker-down docker-logs seed feasibility
+.PHONY: help dev dev-backend dev-frontend test test-backend test-frontend migrate migrate-create lint lint-backend lint-frontend docker-up docker-down docker-logs seed feasibility generate-types types
 
 help:
 	@echo "ScholarPal Monorepo Automation"
 	@echo "Usage:"
-	@echo "  make docker-up    Start entire stack via Docker Compose (db, backend, scheduler, frontend)"
-	@echo "  make docker-down  Stop all Docker Compose services"
-	@echo "  make docker-logs  Follow live logs from all containers"
-	@echo "  make dev          Print instructions to run dev-backend and dev-frontend in separate terminals"
-	@echo "  make dev-backend  Start FastAPI backend development server"
-	@echo "  make dev-frontend Start React Vite frontend development server"
-	@echo "  make seed         Seed database with sample scholarships, rules, and demo records"
-	@echo "  make test         Run backend tests (pytest) and frontend checks"
-	@echo "  make migrate      Apply database migrations via Alembic"
-	@echo "  make lint         Run linting (ruff for backend, tsc for frontend)"
-	@echo "  make feasibility  Run source feasibility checklist probe on Malaysian portals"
+	@echo "  make docker-up       Start entire stack via Docker Compose (db, backend, scheduler, frontend)"
+	@echo "  make docker-down     Stop all Docker Compose services"
+	@echo "  make docker-logs     Follow live logs from all containers"
+	@echo "  make dev             Print instructions to run dev-backend and dev-frontend in separate terminals"
+	@echo "  make dev-backend     Start FastAPI backend development server"
+	@echo "  make dev-frontend    Start React Vite frontend development server"
+	@echo "  make seed            Seed database with sample scholarships, rules, and demo records"
+	@echo "  make test            Run backend tests (pytest) and frontend checks"
+	@echo "  make migrate         Apply database migrations via Alembic"
+	@echo "  make lint            Run linting (ruff for backend, tsc for frontend)"
+	@echo "  make feasibility     Run source feasibility checklist probe on Malaysian portals"
+	@echo "  make generate-types  Generate TypeScript types and OpenAPI specification from Pydantic models"
 
 docker-up:
 	docker compose up --build -d
@@ -65,3 +66,8 @@ lint-frontend:
 
 feasibility:
 	python scripts/scholarship_feasibility.py
+
+generate-types:
+	python scripts/openapi_to_typescript.py
+
+types: generate-types

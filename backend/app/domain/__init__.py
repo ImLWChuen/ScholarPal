@@ -29,28 +29,37 @@ from app.domain.profile_preparation.models import (
 )
 from app.domain.scholarship_discovery.models import (
     Retrieval,
+    RetrievalProcessingClaim,
     Scholarship,
     ScholarshipVersion,
     Source,
     VersionStatus,
 )
+from app.domain.shared_enums import (
+    EvidenceLabel,
+    FreshnessStatus,
+    OverallEligibility,
+    RequirementOutcome,
+    RetrievalStatus,
+    ScholarshipStatus,
+    StudyLevel,
+)
 
 __all__ = [
+    # Models
     "User",
-    "UserRole",
     "StudentProfile",
     "Source",
     "Retrieval",
+    "RetrievalProcessingClaim",
     "Scholarship",
     "ScholarshipVersion",
-    "VersionStatus",
     "Requirement",
     "EligibilityRule",
     "RequiredDocument",
     "EvidenceCheck",
     "ExtractionReview",
     "Application",
-    "ApplicationStage",
     "StudentApplication",
     "ApplicationTask",
     "DocumentChecklistItem",
@@ -60,4 +69,15 @@ __all__ = [
     "Notification",
     "AuditLog",
     "ComparisonSet",
+    # Shared Enums
+    "UserRole",
+    "VersionStatus",
+    "ApplicationStage",
+    "RequirementOutcome",
+    "OverallEligibility",
+    "EvidenceLabel",
+    "StudyLevel",
+    "FreshnessStatus",
+    "ScholarshipStatus",
+    "RetrievalStatus",
 ]
