@@ -8,7 +8,7 @@ This guide covers setting up the ScholarPal monorepo for local development and c
 
 - **Docker & Docker Compose**: Recommended for one-command startup.
 - **Python**: 3.12+ (for local development without Docker)
-- **Node.js**: 22+ (for local development without Docker)
+- **Node.js**: 22.12+ (within the Node 22 series) or 24+ (matching frontend `engines.node` specification)
 - **PostgreSQL**: 15+ (if running natively)
 
 ---
@@ -18,7 +18,7 @@ This guide covers setting up the ScholarPal monorepo for local development and c
 Start the entire ScholarPal stack (PostgreSQL, Backend API, Scheduler daemon, Frontend Nginx):
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 Or with Makefile:
 ```bash
@@ -70,7 +70,7 @@ To seed or re-seed scholarships and deterministic rules manually:
 
 ```bash
 # In Docker:
-docker-compose exec backend python -m app.core.seed
+docker compose exec backend python -m app.core.seed
 
 # Locally:
 cd backend

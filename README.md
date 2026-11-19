@@ -93,7 +93,7 @@ ScholarPal/
 The complete ScholarPal platform (PostgreSQL database, FastAPI backend, background scheduler daemon, and React Nginx frontend) runs with one command:
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 or via Makefile:
 ```bash
@@ -129,7 +129,7 @@ On container startup, `entrypoint.sh`:
 | `make docker-down` | Stop all Docker Compose containers |
 | `make docker-logs` | Stream logs from all running containers |
 | `make seed` | Manually run seed data entrypoint (`python -m app.core.seed`) |
-| `make dev` | Start local development servers (FastAPI + Vite) |
+| `make dev` | Print instructions to run `dev-backend` and `dev-frontend` in separate terminals |
 | `make test` | Run pytest suite and frontend production build |
 | `make lint` | Run ruff check, ruff format check, and TypeScript `tsc --noEmit` |
 | `make migrate` | Run Alembic migrations locally |

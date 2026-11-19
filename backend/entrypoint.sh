@@ -31,7 +31,7 @@ asyncio.run(check())
 # Run database migrations if enabled
 if [ "$RUN_MIGRATIONS" = "true" ]; then
     echo "==> Running database migrations via Alembic..."
-    alembic upgrade head || echo "==> Alembic upgrade skipped or already up to date."
+    alembic upgrade head
 fi
 
 # Run seed data if enabled
