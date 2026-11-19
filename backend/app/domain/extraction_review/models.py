@@ -14,6 +14,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    ForeignKeyConstraint,
     String,
     Text,
     UniqueConstraint,
@@ -58,7 +59,7 @@ class EvidenceCheck(Base):
     """
     Jev by TypeSafe AI evidence verification record for an extracted requirement.
     Rule 3: Jev results assist the administrator and never auto-publish.
-    Uniqueness constraint prevents duplicate processing of the same requirement check.
+    Version-requirement pair constraint guarantees requirement belongs to the same version.
     """
 
     __tablename__ = "evidence_checks"
@@ -72,7 +73,6 @@ class EvidenceCheck(Base):
     )
     requirement_id: Mapped[str | None] = mapped_column(
         String,
-        ForeignKey("requirements.id", ondelete="CASCADE"),
         index=True,
         nullable=True,
     )
@@ -94,10 +94,15 @@ class EvidenceCheck(Base):
 
     # Relationships
     scholarship_version: Mapped[ScholarshipVersion] = relationship(
-        "ScholarshipVersion", back_populates="evidence_checks"
+        "ScholarshipVersion",
+        back_populates="evidence_checks",
+        overlaps="evidence_checks,requirement",
     )
     requirement: Mapped[Requirement | None] = relationship(
-        "Requirement", back_populates="evidence_checks"
+        "Requirement",
+        back_populates="evidence_checks",
+        foreign_keys=[scholarship_version_id, requirement_id],
+        overlaps="evidence_checks,scholarship_version",
     )
 
     __table_args__ = (
@@ -105,6 +110,12 @@ class EvidenceCheck(Base):
             "scholarship_version_id",
             "requirement_id",
             name="uq_evidence_checks_version_req",
+        ),
+        ForeignKeyConstraint(
+            ["scholarship_version_id", "requirement_id"],
+            ["requirements.scholarship_version_id", "requirements.id"],
+            ondelete="CASCADE",
+            name="fk_evidence_checks_version_requirement",
         ),
     )
 

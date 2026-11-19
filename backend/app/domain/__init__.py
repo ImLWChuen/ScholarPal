@@ -29,6 +29,7 @@ from app.domain.profile_preparation.models import (
 )
 from app.domain.scholarship_discovery.models import (
     Retrieval,
+    RetrievalProcessingClaim,
     Scholarship,
     ScholarshipVersion,
     Source,
@@ -41,6 +42,7 @@ __all__ = [
     "StudentProfile",
     "Source",
     "Retrieval",
+    "RetrievalProcessingClaim",
     "Scholarship",
     "ScholarshipVersion",
     "VersionStatus",

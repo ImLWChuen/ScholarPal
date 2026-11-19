@@ -16,18 +16,23 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
+    event,
     func,
+    select,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, synonym
 
 from app.core.db import Base
 
 if TYPE_CHECKING:
     from app.domain.extraction_review.models import RequiredDocument
+    from app.domain.profile_preparation.models import User
+    from app.domain.scholarship_discovery.models import Scholarship
 
 
 class ApplicationStage(str, Enum):
@@ -61,6 +66,8 @@ class Application(Base):
     )
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     submission_reference: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Synonym for backwards-compatibility with legacy portal_submission_reference
+    portal_submission_reference = synonym("submission_reference")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -70,6 +77,8 @@ class Application(Base):
     )
 
     # Relationships
+    student: Mapped[User] = relationship("User", foreign_keys=[student_id])
+    scholarship: Mapped[Scholarship] = relationship("Scholarship", foreign_keys=[scholarship_id])
     tasks: Mapped[list[ApplicationTask]] = relationship(
         "ApplicationTask", back_populates="application", cascade="all, delete-orphan"
     )
@@ -84,10 +93,13 @@ class Application(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint(
+        Index(
+            "uq_applications_active_student_scholarship",
             "student_id",
             "scholarship_id",
-            name="uq_applications_student_scholarship",
+            unique=True,
+            postgresql_where=(stage != ApplicationStage.WITHDRAWN.value),
+            sqlite_where=(stage != ApplicationStage.WITHDRAWN.value),
         ),
     )
 
@@ -172,6 +184,33 @@ class DocumentChecklistItem(Base):
             name="uq_doc_checklist_app_doc",
         ),
     )
+
+
+@event.listens_for(DocumentChecklistItem, "before_insert")
+@event.listens_for(DocumentChecklistItem, "before_update")
+def validate_document_checklist_item_slot(
+    mapper: Any, connection: Any, target: DocumentChecklistItem
+) -> None:
+    """
+    Enforces that a checklist slot only references a required document
+    belonging to the application's associated scholarship.
+    """
+    from app.domain.extraction_review.models import RequiredDocument
+    from app.domain.scholarship_discovery.models import ScholarshipVersion
+
+    stmt = (
+        select(Application.scholarship_id, ScholarshipVersion.scholarship_id)
+        .select_from(Application)
+        .join(RequiredDocument, RequiredDocument.id == target.required_document_id)
+        .join(ScholarshipVersion, ScholarshipVersion.id == RequiredDocument.scholarship_version_id)
+        .where(Application.id == target.application_id)
+    )
+    row = connection.execute(stmt).first()
+    if row and row[0] != row[1]:
+        raise ValueError(
+            f"Slot integrity violation: Required document '{target.required_document_id}' "
+            f"belongs to scholarship '{row[1]}', not application scholarship '{row[0]}'."
+        )
 
 
 class Interview(Base):

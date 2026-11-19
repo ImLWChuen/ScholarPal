@@ -17,6 +17,7 @@ erDiagram
     USERS ||--o{ SCHOLARSHIP_VERSIONS : "approves as admin"
 
     SOURCES ||--o{ RETRIEVALS : "yields crawl runs"
+    SOURCES ||--o{ RETRIEVAL_PROCESSING_CLAIMS : "claims atomic processing"
     SOURCES ||--o{ SCHOLARSHIPS : "supplies updates"
 
     RETRIEVALS ||--o{ SCHOLARSHIP_VERSIONS : "provides snapshot"
@@ -86,8 +87,17 @@ erDiagram
         string status "success | failed | timeout | uncertain"
         integer http_status_code
         text error
-        string content_hash "SHA-256 (prevents duplicate processing)"
+        string content_hash "SHA-256 (history lookup index)"
         datetime retrieved_at
+    }
+
+    RETRIEVAL_PROCESSING_CLAIMS {
+        string id PK
+        string source_id FK
+        string url
+        string content_hash "UK on (source_id, url, content_hash)"
+        datetime claimed_at
+        datetime processed_at
     }
 
     SCHOLARSHIPS {
@@ -146,7 +156,7 @@ erDiagram
     EVIDENCE_CHECKS {
         string id PK
         string scholarship_version_id FK
-        string requirement_id FK
+        string requirement_id FK "Composite FK with version"
         string retrieval_id FK
         string jev_label "Supported | Refuted | Insufficient_Evidence"
         json probabilities "Distribution across choices"
@@ -185,7 +195,7 @@ erDiagram
     DOCUMENT_CHECKLIST_ITEMS {
         string id PK
         string application_id FK
-        string required_document_id FK
+        string required_document_id FK "Validated slot integrity"
         string file_path "Stored file reference"
         string file_name
         boolean is_verified
@@ -278,15 +288,17 @@ erDiagram
 
 To ensure high data integrity, prevent race conditions, and guarantee idempotent job execution, the schema defines the following constraints:
 
-| Table | Constraint Name | Columns | Purpose |
+| Table | Constraint / Index Name | Columns | Purpose |
 | :--- | :--- | :--- | :--- |
 | `application_tasks` | `uq_application_tasks_app_key` | `(application_id, task_key)` | **Prevents duplicate task generation** for the same application action item. |
-| `retrievals` | `ix_retrievals_source_url_hash` | `(source_id, url, content_hash)` | **Prevents duplicate processing of identical updates** when portal HTML has not changed. |
-| `scholarship_versions` | `uq_scholarship_cycle_version` | `(scholarship_id, application_cycle, version_number)` | Enforces **immutable versioning** per cycle. |
-| `applications` | `uq_applications_student_scholarship` | `(student_id, scholarship_id)` | Restricts students to **one active application record per scholarship**. |
-| `document_checklist_items` | `uq_doc_checklist_app_doc` | `(application_id, required_document_id)` | Prevents duplicate checklist slots for the same required document. |
-| `evidence_checks` | `uq_evidence_checks_version_req` | `(scholarship_version_id, requirement_id)` | Guarantees **one evidence check per requirement per version revision**. |
-| `award_offers` | `uq_award_offers_application_id` | `(application_id)` | Enforces a strict 1:1 relationship between application and award offer. |
+| `retrieval_processing_claims` | `uq_retrieval_processing_claims` | `(source_id, url, content_hash)` | **Atomic claim deduplication** ensuring identical content hashes are not re-processed at the boundary. |
+| `retrievals` | `ix_retrievals_source_url_hash` | `(source_id, url, content_hash)` | **Non-unique lookup index** across historical crawl runs (does not enforce deduplication). |
+| `scholarship_versions` | `uq_scholarship_cycle_version` | `(scholarship_id, application_cycle, version_number)` | Enforces **unique cycle revision counters**. Snapshot immutability for approved versions is enforced by the `before_update` listener. |
+| `applications` | `uq_applications_active_student_scholarship` | `(student_id, scholarship_id)` WHERE stage != 'Withdrawn' | **Partial unique index** restricting students to one active application while permitting re-application after withdrawal. |
+| `document_checklist_items` | `uq_doc_checklist_app_doc` | `(application_id, required_document_id)` | Prevents duplicate checklist slots for the same required document. Validated on write to ensure document matches application scholarship. |
+| `evidence_checks` | `uq_evidence_checks_version_req` | `(scholarship_version_id, requirement_id)` | Guarantees **one evidence check per requirement per version revision**. Composite FK enforces version alignment. |
+| `requirements` | `uq_requirements_version_id` | `(scholarship_version_id, id)` | Enables composite foreign key targeting from `evidence_checks`. |
+| `award_offers` | `ix_award_offers_application_id` | `(application_id)` | Enforces a strict 1:1 relationship between application and award offer via a unique index. |
 | `student_profiles` | `ix_student_profiles_user_id` | `(user_id)` | Enforces a strict 1:1 relationship between user and student profile. |
 | `users` | `ix_users_email` | `(email)` | Enforces unique email addresses across students and administrators. |
 
@@ -296,4 +308,4 @@ To ensure high data integrity, prevent race conditions, and guarantee idempotent
 
 Migrations are managed with Alembic in `backend/alembic/versions/`:
 - `0001_initial_schema.py`: Initial prototype baseline schema.
-- `0002_rich_schema.py`: Complete enterprise schema upgrade introducing `users`, `sources`, `retrievals`, `scholarship_versions`, `requirements`, `required_documents`, `evidence_checks`, `applications`, `application_tasks`, `document_checklist_items`, `interviews`, `award_offers`, `reminders`, `notifications`, and `audit_log` with cascading foreign keys and unique constraints.
+- `0002_rich_schema.py`: Complete enterprise schema upgrade introducing `users`, `sources`, `retrievals`, `retrieval_processing_claims`, `scholarship_versions`, `requirements`, `required_documents`, `evidence_checks`, `applications`, `application_tasks`, `document_checklist_items`, `interviews`, `award_offers`, `reminders`, `notifications`, and `audit_log` with verified user backfilling, legacy application migration, cascading foreign keys, and unique constraints.

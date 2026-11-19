@@ -80,6 +80,14 @@ SAMPLE_SOURCES = [
         "schedule": "0 4 * * *",
         "is_active": True,
     },
+    {
+        "id": "src-yayasan-petronas",
+        "name": "Yayasan PETRONAS",
+        "base_url": "https://www.yayasanpetronas.com.my",
+        "config": {"crawl_delay": 2, "timeout": 15},
+        "schedule": "0 5 * * *",
+        "is_active": True,
+    },
 ]
 
 SAMPLE_SCHOLARSHIPS = [
@@ -107,7 +115,7 @@ SAMPLE_SCHOLARSHIPS = [
     },
     {
         "id": "sch-petronas-pesp-2026",
-        "source_id": "src-yayasan-khazanah",
+        "source_id": "src-yayasan-petronas",
         "title": "Petronas Education Sponsorship Programme (PESP) 2026",
         "provider": "Yayasan PETRONAS",
         "official_portal_url": "https://educationsponsorship.petronas.com.my",
@@ -321,8 +329,8 @@ DEMO_COMPARISON_SET = {
 DEMO_NOTIFICATION = {
     "id": "notif-student-demo-1",
     "user_id": "student-demo-123",
-    "title": "Application Cycle 2026 Open",
-    "content": "Yayasan Khazanah Global Scholarship 2026 is now open for submissions.",
+    "title": "Yayasan Khazanah 2026 Application Cycle Announcement",
+    "content": "Review the Yayasan Khazanah Global Scholarship 2026 requirements and key dates.",
     "notification_type": "deadline_warning",
     "is_read": False,
 }
@@ -332,12 +340,13 @@ async def seed_data() -> None:
     """Inserts baseline seed data into existing tables."""
     logger.info("Initializing database session for seed data...")
     async with AsyncSessionLocal() as session:
-        # 1. Seed Users
+        # 1. Seed Users (Parents must exist before foreign-key children)
         for user_data in SAMPLE_USERS:
             existing = await session.execute(select(User).where(User.id == user_data["id"]))
             if not existing.scalars().first():
                 session.add(User(**user_data))
                 logger.info(f"Seeded user: {user_data['full_name']}")
+        await session.flush()
 
         # 2. Seed Sources
         for src_data in SAMPLE_SOURCES:
@@ -345,6 +354,7 @@ async def seed_data() -> None:
             if not existing.scalars().first():
                 session.add(Source(**src_data))
                 logger.info(f"Seeded source: {src_data['name']}")
+        await session.flush()
 
         # 3. Seed Scholarships
         for item in SAMPLE_SCHOLARSHIPS:
@@ -354,6 +364,7 @@ async def seed_data() -> None:
             if not existing.scalars().first():
                 session.add(Scholarship(**item))
                 logger.info(f"Seeded scholarship: {item['title']}")
+        await session.flush()
 
         # 4. Seed Scholarship Versions
         for ver_data in SAMPLE_VERSIONS:
@@ -363,6 +374,7 @@ async def seed_data() -> None:
             if not existing.scalars().first():
                 session.add(ScholarshipVersion(**ver_data))
                 logger.info(f"Seeded version: {ver_data['id']}")
+        await session.flush()
 
         # 5. Seed Version Requirements
         for req_data in SAMPLE_REQUIREMENTS:
@@ -390,6 +402,7 @@ async def seed_data() -> None:
             if not existing.scalars().first():
                 session.add(EligibilityRule(**rule_data))
                 logger.info(f"Seeded legacy rule: {rule_data['id']}")
+        await session.flush()
 
         # 8. Seed Demo Student Profile
         existing_profile = await session.execute(
@@ -398,23 +411,38 @@ async def seed_data() -> None:
         if not existing_profile.scalars().first():
             session.add(StudentProfile(**DEMO_STUDENT_PROFILE))
             logger.info("Seeded demo student profile (household_income stays None as per Rule 5)")
+        await session.flush()
 
         # 9. Seed Demo Application
-        existing_app = await session.execute(
-            select(Application).where(Application.id == DEMO_APPLICATION["id"])
+        existing_app_res = await session.execute(
+            select(Application).where(
+                Application.student_id == DEMO_APPLICATION["student_id"],
+                Application.scholarship_id == DEMO_APPLICATION["scholarship_id"],
+            )
         )
-        if not existing_app.scalars().first():
-            session.add(Application(**DEMO_APPLICATION))
+        app_row = existing_app_res.scalars().first()
+        if not app_row:
+            app_row = Application(**DEMO_APPLICATION)
+            session.add(app_row)
+            await session.flush()
             logger.info("Seeded demo application in Preparing stage")
+        else:
+            logger.info(f"Reusing existing demo application: {app_row.id}")
 
-        # 10. Seed Application Tasks
+        # 10. Seed Application Tasks using the resolved app_row.id
         for task_data in DEMO_TASKS:
+            task_payload = dict(task_data)
+            task_payload["application_id"] = app_row.id
             existing = await session.execute(
-                select(ApplicationTask).where(ApplicationTask.id == task_data["id"])
+                select(ApplicationTask).where(
+                    ApplicationTask.application_id == app_row.id,
+                    ApplicationTask.task_key == task_payload["task_key"],
+                )
             )
             if not existing.scalars().first():
-                session.add(ApplicationTask(**task_data))
-                logger.info(f"Seeded application task: {task_data['title']}")
+                session.add(ApplicationTask(**task_payload))
+                logger.info(f"Seeded application task: {task_payload['title']}")
+        await session.flush()
 
         # 11. Seed Demo Comparison Set
         existing_cmp = await session.execute(
