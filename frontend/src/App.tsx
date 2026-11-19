@@ -1,25 +1,21 @@
-import { useEffect, useState } from "react";
-import { checkApiHealth } from "./api/health";
+import React from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { RouterProvider } from "react-router-dom";
+import { router } from "./routes";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export function App() {
-  const [status, setStatus] = useState("Checking API connection…");
-
-  useEffect(() => {
-    const controller = new AbortController();
-    checkApiHealth(controller.signal)
-      .then(() => setStatus("API connected."))
-      .catch(() => {
-        if (!controller.signal.aborted) {
-          setStatus("API unavailable. Start the FastAPI server and reload.");
-        }
-      });
-    return () => controller.abort();
-  }, []);
-
   return (
-    <main>
-      <h1>ScholarPal</h1>
-      <p role="status">{status}</p>
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   );
 }

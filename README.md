@@ -1,72 +1,111 @@
 # ScholarPal
 
-ScholarPal is a planned scholarship discovery and application preparation platform for Malaysian students. This repository is the initial scaffold for the React and TypeScript frontend, FastAPI backend, Scrapy crawler and PostgreSQL data layer.
+ScholarPal is an intelligent scholarship discovery, deterministic eligibility evaluation, and application tracking platform designed for Malaysian secondary, pre-university, undergraduate, and postgraduate students.
 
-## Run locally
+---
 
-Use Python 3.12 or later and Node.js 22.12+ on the 22.x line or Node.js 24+.
+## 🏛️ Monorepo Structure
 
-From the repository root, start the API in PowerShell.
-
-```powershell
-cd backend
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e .
-.\.venv\Scripts\python.exe -m uvicorn scholarpal.main:app --reload
+```
+ScholarPal/
+├── backend/                  # FastAPI + SQLAlchemy 2.0 + Alembic + Pydantic v2
+│   ├── alembic/              # Database migration scripts & environments
+│   ├── app/
+│   │   ├── api/              # API routers, v1 endpoints, and dependencies
+│   │   ├── core/             # Config, async database engine, security & ownership
+│   │   ├── domain/           # Six decoupled business modules:
+│   │   │   ├── profile_preparation/
+│   │   │   ├── scholarship_discovery/
+│   │   │   ├── extraction_review/
+│   │   │   ├── eligibility_impact/
+│   │   │   ├── applications_interviews/
+│   │   │   └── comparison/
+│   │   ├── repositories/     # Generic async database repository patterns
+│   │   ├── services/         # Application service layer
+│   │   ├── clients/          # External AI clients:
+│   │   │   ├── llm/          # Structured output extraction (never eligibility)
+│   │   │   └── jev/          # Jev (Choice primitive) evidence checks (never auto-publish)
+│   │   └── jobs/             # Scheduled background jobs & change orchestration
+│   ├── tests/                # Pytest async test suite
+│   ├── alembic.ini           # Alembic configuration
+│   └── pyproject.toml        # Backend dependencies and ruff configuration
+│
+├── frontend/                 # React 19 + TypeScript + Vite + React Router + TanStack Query
+│   ├── src/
+│   │   ├── api/              # API client and health queries
+│   │   ├── components/       # UI component library (Button, Card, Badge, Input, Navbar)
+│   │   ├── pages/            # View pages (Home, Scholarships, Admin Console, NotFound)
+│   │   ├── routes/           # React Router route tree
+│   │   ├── App.tsx           # QueryClientProvider & RouterProvider root
+│   │   └── main.tsx          # Application mount point
+│   └── package.json          # Frontend dependencies and build scripts
+│
+├── crawler/                  # Scrapy web crawler project
+│   ├── crawler/
+│   │   ├── items.py          # Scholarship crawled items
+│   │   ├── pipelines.py      # Trafilatura + BeautifulSoup text cleaning pipelines
+│   │   ├── settings.py       # Polite crawling policies and bot identification
+│   │   └── spiders/          # Portal spiders
+│   ├── scrapy.cfg            # Scrapy project configuration
+│   └── pyproject.toml        # Scrapy dependencies
+│
+├── docs/                     # Architectural and domain documentation
+│   ├── architecture.md       # Four-tier system architecture and data flows
+│   ├── non_negotiable_rules.md # The 8 core invariant rules
+│   ├── modules.md            # Detailed breakdown of the 6 domain modules
+│   └── setup.md              # Local developer environment setup guide
+│
+├── .env.example              # Sample environment configuration
+├── Makefile                  # Automated commands: dev, test, migrate, lint
+├── .pre-commit-config.yaml   # Pre-commit hooks for formatting and linting
+└── .gitignore                # Workspace git ignore specifications
 ```
 
-In a second terminal at the repository root, start the frontend.
+---
 
-```powershell
-cd frontend
-npm ci
-npm run dev
+## 🔒 Non-Negotiable Core Rules
+
+1. **Deterministic Eligibility**: Eligibility results come only from predefined rules, never from an LLM.
+2. **Three-State Requirement Evaluation**: Each requirement is `satisfied`, `unmet`, or `unresolved`. The overall verdict is:
+   - *Does not meet recorded requirements* (any mandatory requirement is unmet)
+   - *Needs clarification* (no mandatory requirement is unmet, but information is missing or unclear)
+   - *Meets recorded requirements* (all mandatory requirements are satisfied)
+3. **Assisted Admin Verification**: Jev by TypeSafe AI (`Choice` primitive) results assist the administrator and never auto-publish.
+4. **Resilient Record Preservation**: Failed portal retrieval keeps the last-known record and flags uncertain freshness; it never marks a scholarship closed.
+5. **Data Integrity for Missing Values**: Unknown values stay unknown (`None`/`null`), never zero.
+6. **Ephemeral What-If Checks**: What-if simulations never modify saved student data.
+7. **Official Portal Submissions**: Students submit on official provider portals; ScholarPal never marks submission automatically.
+8. **Strict Record Ownership**: Backend enforces student ownership on every student endpoint (`403 Forbidden` on unauthorized access).
+
+---
+
+## 🚀 Quickstart & Common Commands
+
+### 1. Environment Setup
+```bash
+# Clone the repository
+git clone https://github.com/ImLWChuen/ScholarPal.git
+cd ScholarPal
+
+# Copy sample environment configuration
+cp .env.example .env
 ```
 
-Open [the frontend](http://localhost:5173) to check whether the API responds. The health route is available at [localhost:8000/api/health](http://localhost:8000/api/health). Vite proxies `/api` requests to FastAPI during local development. This startup check requires no database or external service.
+### 2. Makefile Commands
+| Command | Description |
+|---|---|
+| `make dev` | Instructions to launch backend and frontend servers |
+| `make dev-backend` | Run FastAPI backend (`uvicorn app.main:app --reload --port 8000`) |
+| `make dev-frontend` | Run React Vite frontend (`npm run dev`) |
+| `make migrate` | Run database migrations via Alembic |
+| `make test` | Run all test suites (pytest + frontend build verification) |
+| `make lint` | Run ruff lint/format checks on backend and tsc on frontend |
 
-From `frontend/`, run `npm run build` to type-check and build the frontend. From `backend/`, install the optional dependencies with `python -m pip install -e ".[crawler,postgres,test]"` inside the virtual environment when working on the corresponding integrations.
+---
 
-With the crawler dependencies installed, run `.\.venv\Scripts\python.exe -m scrapy list` from `backend/` to check that Scrapy loads its project configuration. The spider list will be empty until the team adds approved source adapters.
+## 📖 Detailed Documentation
 
-## Project layout
-
-```text
-frontend/
-  src/api/                      Browser client for the REST API
-  src/features/                 Student workspace, authentication and admin console
-backend/
-  src/scholarpal/
-    main.py                     FastAPI entry point
-    application/
-      api/                      REST routes and request validation
-      auth/                     Authentication, roles and ownership checks
-      jobs/                     Scheduled retrieval, reassessment and reminders
-      workflows/                Review, publication and confirmed profile changes
-    domain/                     Six functional modules
-    infrastructure/
-      ai/                       Structured LLM extraction and Jev adapters
-      crawler/                  Scrapy source adapters and content cleaning
-      postgres/                 PostgreSQL repositories and transactions
-  migrations/                   Database schema changes
-  tests/                        Automated tests
-evaluation/                     Labelled datasets and prototype evaluation
-```
-
-| Proposal module | Backend under `domain/` | Frontend under `features/` |
-| --- | --- | --- |
-| Student profile and application preparation | `profile_preparation/` | `profile/`, `preparation/` |
-| Scholarship crawler and aggregator | `scholarship_discovery/` | `scholarships/`, `admin/` |
-| Information extraction and evidence review | `extraction_review/` | `admin/` |
-| Explainable eligibility and change impact | `eligibility/` | `eligibility/`, `profile/` |
-| Application tracking and interview management | `application_tracking/` | `applications/` |
-| Scholarship and offer comparison | `comparison/` | `comparison/` |
-
-## Planned workflow boundaries
-
-- Retrieve and clean public source content, extract structured facts with excerpts, and send Jev evidence checks to an administrator for review. Only approved versions become public. Approved changes can trigger reassessment, preparation task updates and reminders.
-- Run eligibility against approved requirements using deterministic rules. A what-if preview uses temporary values. A confirmed profile change goes through ownership checks and then triggers reassessment of affected records.
-- Keep public-source AI processing separate from student data. The optional conversational assistant can call the eligibility workflow after the core features are ready.
-- Store document readiness as checklist state. Students submit their applications through official provider portals.
-
-The frontend and health endpoint are wired up. The feature directories reserve implementation space for the proposal. Database migrations, approved source adapters, background jobs, authentication and AI integrations are pending.
+- [System Architecture](docs/architecture.md)
+- [Non-Negotiable Rules Invariants](docs/non_negotiable_rules.md)
+- [Six Domain Modules Breakdown](docs/modules.md)
+- [Local Setup & Development Guide](docs/setup.md)

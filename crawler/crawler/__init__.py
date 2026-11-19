@@ -1,0 +1,1 @@
+# ScholarPal Scrapy Crawler Package

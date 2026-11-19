@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=70.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scholarpal-crawler"
+version = "0.1.0"
+description = "ScholarPal portal web scraper and cleaning pipeline"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "scrapy>=2.11,<3.0",
+    "beautifulsoup4>=4.12,<5.0",
+    "trafilatura>=2.0,<3.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["crawler*"]
