@@ -1,4 +1,6 @@
-from pydantic import field_validator
+from typing import Any
+
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,7 +18,17 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
 
     # Database
+    POSTGRES_SERVER: str | None = None
+    POSTGRES_PORT: int = 5432
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_DB: str = "scholarpal"
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/scholarpal"
+
+    # Operational & Startup flags
+    RUN_MIGRATIONS: bool = False
+    SEED_DATA: bool = False
+    SCHEDULER_INTERVAL_SECONDS: int = 60
 
     # CORS
     BACKEND_CORS_ORIGINS: list[str] = [
@@ -40,6 +52,21 @@ class Settings(BaseSettings):
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",") if i.strip()]
         return v
+
+    @model_validator(mode="before")
+    @classmethod
+    def assemble_database_url(cls, values: dict[str, Any]) -> dict[str, Any]:
+        if isinstance(values, dict):
+            # If POSTGRES_SERVER is set and DATABASE_URL is not customized
+            db_url = values.get("DATABASE_URL")
+            server = values.get("POSTGRES_SERVER")
+            if server and (not db_url or "localhost" in db_url):
+                user = values.get("POSTGRES_USER", "postgres")
+                pwd = values.get("POSTGRES_PASSWORD", "postgres")
+                port = values.get("POSTGRES_PORT", 5432)
+                db = values.get("POSTGRES_DB", "scholarpal")
+                values["DATABASE_URL"] = f"postgresql+asyncpg://{user}:{pwd}@{server}:{port}/{db}"
+        return values
 
 
 settings = Settings()
