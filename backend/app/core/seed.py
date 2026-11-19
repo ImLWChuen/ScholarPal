@@ -392,9 +392,7 @@ async def _seed_with_async_session(session: AsyncSession) -> None:
     # 3. Seed Scholarships: Baseline + 15 Fictional Demo Scholarships
     all_scholarships = SAMPLE_SCHOLARSHIPS + FIXTURE_SCHOLARSHIPS
     for item in all_scholarships:
-        existing = await session.execute(
-            select(Scholarship).where(Scholarship.id == item["id"])
-        )
+        existing = await session.execute(select(Scholarship).where(Scholarship.id == item["id"]))
         if not existing.scalars().first():
             session.add(Scholarship(**item))
             logger.info(f"Seeded scholarship: {item['title']} (status: {item.get('status')})")
@@ -513,7 +511,8 @@ async def _seed_with_async_session(session: AsyncSession) -> None:
 def seed_data_sync(session: Session) -> None:
     """
     Synchronous seed insertion helper for synchronous SQLite testing and verification.
-    Seeds users, sources, 15 fictional scholarships, 5 boundary student profiles, and administrators.
+    Seeds users, sources, 15 fictional scholarships, 5 boundary student profiles,
+    and administrators.
     """
     # 1. Users
     all_users = SAMPLE_USERS + FIXTURE_ADMINISTRATORS + FIXTURE_STUDENT_USERS
@@ -535,49 +534,85 @@ def seed_data_sync(session: Session) -> None:
     # 3. Scholarships
     all_scholarships = SAMPLE_SCHOLARSHIPS + FIXTURE_SCHOLARSHIPS
     for item in all_scholarships:
-        if not session.execute(select(Scholarship).where(Scholarship.id == item["id"])).scalars().first():
+        if (
+            not session.execute(select(Scholarship).where(Scholarship.id == item["id"]))
+            .scalars()
+            .first()
+        ):
             session.add(Scholarship(**item))
     session.flush()
 
     # 4. Scholarship Versions
     all_versions = SAMPLE_VERSIONS + FIXTURE_SCHOLARSHIP_VERSIONS
     for ver_data in all_versions:
-        if not session.execute(select(ScholarshipVersion).where(ScholarshipVersion.id == ver_data["id"])).scalars().first():
+        if (
+            not session.execute(
+                select(ScholarshipVersion).where(ScholarshipVersion.id == ver_data["id"])
+            )
+            .scalars()
+            .first()
+        ):
             session.add(ScholarshipVersion(**ver_data))
     session.flush()
 
     # 5. Requirements
     all_requirements = SAMPLE_REQUIREMENTS + FIXTURE_REQUIREMENTS
     for req_data in all_requirements:
-        if not session.execute(select(Requirement).where(Requirement.id == req_data["id"])).scalars().first():
+        if (
+            not session.execute(select(Requirement).where(Requirement.id == req_data["id"]))
+            .scalars()
+            .first()
+        ):
             session.add(Requirement(**req_data))
 
     # 6. Documents
     all_documents = SAMPLE_DOCUMENTS + FIXTURE_DOCUMENTS
     for doc_data in all_documents:
-        if not session.execute(select(RequiredDocument).where(RequiredDocument.id == doc_data["id"])).scalars().first():
+        if (
+            not session.execute(
+                select(RequiredDocument).where(RequiredDocument.id == doc_data["id"])
+            )
+            .scalars()
+            .first()
+        ):
             session.add(RequiredDocument(**doc_data))
 
     # 7. Rules
     for rule_data in SAMPLE_RULES:
-        if not session.execute(select(EligibilityRule).where(EligibilityRule.id == rule_data["id"])).scalars().first():
+        if (
+            not session.execute(
+                select(EligibilityRule).where(EligibilityRule.id == rule_data["id"])
+            )
+            .scalars()
+            .first()
+        ):
             session.add(EligibilityRule(**rule_data))
     session.flush()
 
     # 8. Profiles
     all_profiles = [DEMO_STUDENT_PROFILE] + FIXTURE_STUDENT_PROFILES
     for prof_data in all_profiles:
-        if not session.execute(select(StudentProfile).where(StudentProfile.user_id == prof_data["user_id"])).scalars().first():
+        if (
+            not session.execute(
+                select(StudentProfile).where(StudentProfile.user_id == prof_data["user_id"])
+            )
+            .scalars()
+            .first()
+        ):
             session.add(StudentProfile(**prof_data))
     session.flush()
 
     # 9. Applications
-    existing_app = session.execute(
-        select(Application).where(
-            Application.student_id == DEMO_APPLICATION["student_id"],
-            Application.scholarship_id == DEMO_APPLICATION["scholarship_id"],
+    existing_app = (
+        session.execute(
+            select(Application).where(
+                Application.student_id == DEMO_APPLICATION["student_id"],
+                Application.scholarship_id == DEMO_APPLICATION["scholarship_id"],
+            )
         )
-    ).scalars().first()
+        .scalars()
+        .first()
+    )
     if not existing_app:
         app_row = Application(**DEMO_APPLICATION)
         session.add(app_row)
@@ -589,21 +624,35 @@ def seed_data_sync(session: Session) -> None:
     for task_data in DEMO_TASKS:
         task_payload = dict(task_data)
         task_payload["application_id"] = app_row.id
-        if not session.execute(
-            select(ApplicationTask).where(
-                ApplicationTask.application_id == app_row.id,
-                ApplicationTask.task_key == task_payload["task_key"],
+        if (
+            not session.execute(
+                select(ApplicationTask).where(
+                    ApplicationTask.application_id == app_row.id,
+                    ApplicationTask.task_key == task_payload["task_key"],
+                )
             )
-        ).scalars().first():
+            .scalars()
+            .first()
+        ):
             session.add(ApplicationTask(**task_payload))
     session.flush()
 
     # 11. Comparison Set
-    if not session.execute(select(ComparisonSet).where(ComparisonSet.id == DEMO_COMPARISON_SET["id"])).scalars().first():
+    if (
+        not session.execute(
+            select(ComparisonSet).where(ComparisonSet.id == DEMO_COMPARISON_SET["id"])
+        )
+        .scalars()
+        .first()
+    ):
         session.add(ComparisonSet(**DEMO_COMPARISON_SET))
 
     # 12. Notification
-    if not session.execute(select(Notification).where(Notification.id == DEMO_NOTIFICATION["id"])).scalars().first():
+    if (
+        not session.execute(select(Notification).where(Notification.id == DEMO_NOTIFICATION["id"]))
+        .scalars()
+        .first()
+    ):
         session.add(Notification(**DEMO_NOTIFICATION))
 
     session.commit()
@@ -613,7 +662,10 @@ def seed_data_sync(session: Session) -> None:
 def main() -> None:
     """CLI entrypoint for database seeding."""
     parser = argparse.ArgumentParser(
-        description="ScholarPal database seed command. Populates sources, fictional scholarships, administrators, and boundary student profiles."
+        description=(
+            "ScholarPal database seed command. Populates sources, fictional scholarships, "
+            "administrators, and boundary student profiles."
+        )
     )
     parser.add_argument(
         "--summary",

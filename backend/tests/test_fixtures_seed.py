@@ -4,9 +4,12 @@ Tests for ScholarPal Fixtures and Seed Data.
 Verifies:
 - 5 Monitored sources seeded
 - 2 Fictional administrators seeded with UserRole.ADMINISTRATOR
-- 15 Fictional scholarships seeded across all study levels (Secondary, Pre-U, Undergraduate, Postgraduate)
-- All 15 fictional scholarships marked with status='demo' and demo flags so they never appear as current opportunities
-- 5 Boundary-case student profiles (income exactly at threshold, missing fields, unmet mandatory rule, subject results boundary, study level mismatch)
+- 15 Fictional scholarships seeded across all study levels (Secondary, Pre-U,
+  Undergraduate, Postgraduate)
+- All 15 fictional scholarships marked with status='demo' and demo flags
+  so they never appear as current opportunities
+- 5 Boundary-case student profiles (income exactly at threshold, missing
+  fields, unmet mandatory rule, subject results boundary, study level mismatch)
 - Execution of seed insertion preserves database referential integrity
 """
 
@@ -19,9 +22,6 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.core.db import Base
 from app.core.fixtures import (
     FIXTURE_ADMINISTRATORS,
-    FIXTURE_DOCUMENTS,
-    FIXTURE_REQUIREMENTS,
-    FIXTURE_SCHOLARSHIP_VERSIONS,
     FIXTURE_SCHOLARSHIPS,
     FIXTURE_SOURCES,
     FIXTURE_STUDENT_PROFILES,
@@ -29,11 +29,9 @@ from app.core.fixtures import (
 )
 from app.core.seed import seed_data_sync
 from app.domain import (
-    Application,
     RequiredDocument,
     Requirement,
     Scholarship,
-    ScholarshipVersion,
     Source,
     StudentProfile,
     User,
@@ -160,9 +158,11 @@ def test_seed_data_sync_database_execution(sync_session: Session):
     assert len(demo_scholarships) == 15
 
     # Verify query for live open opportunities NEVER includes demo scholarships
-    live_open_scholarships = sync_session.execute(
-        select(Scholarship).where(Scholarship.status == "open")
-    ).scalars().all()
+    live_open_scholarships = (
+        sync_session.execute(select(Scholarship).where(Scholarship.status == "open"))
+        .scalars()
+        .all()
+    )
     for live in live_open_scholarships:
         assert not live.title.startswith("[DEMO FICTIONAL]")
         assert live.status != "demo"

@@ -236,7 +236,8 @@ FIXTURE_STUDENT_PROFILES: list[dict[str, Any]] = [
             "Sejarah": "B+",  # Exactly 7 A/A+ grades (1 grade short of 8)
         },
     },
-    # Boundary 5: Study level & citizenship mismatch (Postgraduate international in undergraduate track)
+    # Boundary 5: Study level & citizenship mismatch
+    # (Postgraduate international in undergraduate track)
     {
         "id": "prof-demo-mismatch",
         "user_id": "usr-demo-mismatch",
@@ -423,7 +424,9 @@ FIXTURE_SCHOLARSHIPS: list[dict[str, Any]] = [
     {
         "id": "sch-demo-pg-15",
         "source_id": "src-yayasan-petronas",
-        "title": "[DEMO FICTIONAL] Biasiswa Pascasiswazah Kelestarian Alam Sekitar PETRONAS (Simulated)",
+        "title": (
+            "[DEMO FICTIONAL] Biasiswa Pascasiswazah Kelestarian Alam Sekitar PETRONAS (Simulated)"
+        ),
         "provider": "Yayasan PETRONAS (Fictional Track)",
         "official_portal_url": f"{DEMO_PORTAL_BASE}/pascasiswazah-kelestarian",
         "deadline": datetime(2026, 12, 31, 23, 59, 59, tzinfo=UTC),
@@ -445,7 +448,10 @@ FIXTURE_SCHOLARSHIP_VERSIONS: list[dict[str, Any]] = [
         "application_cycle": "2026 Demo Cycle",
         "version_number": 1,
         "title": "[DEMO FICTIONAL] Yayasan Melati Biasiswa Bakti Menengah 2026",
-        "description": "Fictional secondary school bursary supporting Form 4-5 students from lower-income households.",
+        "description": (
+            "Fictional secondary school bursary supporting Form 4-5 students from "
+            "lower-income households."
+        ),
         "coverage_details": {
             "is_demo": DEMO_FLAG,
             "demo_notice": "FICTIONAL DEMO RECORD - NOT A CURRENT OPPORTUNITY",
@@ -526,7 +532,10 @@ FIXTURE_SCHOLARSHIP_VERSIONS: list[dict[str, Any]] = [
         "application_cycle": "2026 Demo Cycle",
         "version_number": 1,
         "title": "[DEMO FICTIONAL] Yayasan Khazanah Fictional Pre-U Global Foundation",
-        "description": "Fictional pre-university preparatory sponsorship for elite overseas undergraduate admission.",
+        "description": (
+            "Fictional pre-university preparatory sponsorship for elite overseas "
+            "undergraduate admission."
+        ),
         "coverage_details": {
             "is_demo": DEMO_FLAG,
             "demo_notice": "FICTIONAL DEMO RECORD - NOT A CURRENT OPPORTUNITY",
@@ -546,7 +555,9 @@ FIXTURE_SCHOLARSHIP_VERSIONS: list[dict[str, Any]] = [
         "application_cycle": "2026 Demo Cycle",
         "version_number": 1,
         "title": "[DEMO FICTIONAL] Tabung Warisan Biasiswa Matrikulasi & STPM Madani",
-        "description": "Need-based monthly stipend and textbook grant for public matriculation students.",
+        "description": (
+            "Need-based monthly stipend and textbook grant for public matriculation students."
+        ),
         "coverage_details": {
             "is_demo": DEMO_FLAG,
             "demo_notice": "FICTIONAL DEMO RECORD - NOT A CURRENT OPPORTUNITY",
@@ -586,7 +597,10 @@ FIXTURE_SCHOLARSHIP_VERSIONS: list[dict[str, Any]] = [
         "application_cycle": "2026 Demo Cycle",
         "version_number": 1,
         "title": "[DEMO FICTIONAL] Yayasan Inovasi Digital Malaysia Tech Apprenticeship 2026",
-        "description": "Fictional full software engineering undergraduate scholarship with tech apprenticeship.",
+        "description": (
+            "Fictional full software engineering undergraduate scholarship with tech "
+            "apprenticeship."
+        ),
         "coverage_details": {
             "is_demo": DEMO_FLAG,
             "demo_notice": "FICTIONAL DEMO RECORD - NOT A CURRENT OPPORTUNITY",
@@ -607,7 +621,9 @@ FIXTURE_SCHOLARSHIP_VERSIONS: list[dict[str, Any]] = [
         "application_cycle": "2026 Demo Cycle",
         "version_number": 1,
         "title": "[DEMO FICTIONAL] Yayasan PETRONAS Simulated Green Energy Undergraduate Award",
-        "description": "Simulated undergraduate scholarship for clean energy and chemical engineering.",
+        "description": (
+            "Simulated undergraduate scholarship for clean energy and chemical engineering."
+        ),
         "coverage_details": {
             "is_demo": DEMO_FLAG,
             "demo_notice": "FICTIONAL DEMO RECORD - NOT A CURRENT OPPORTUNITY",
@@ -628,7 +644,9 @@ FIXTURE_SCHOLARSHIP_VERSIONS: list[dict[str, Any]] = [
         "application_cycle": "2026 Demo Cycle",
         "version_number": 1,
         "title": "[DEMO FICTIONAL] Biasiswa Kepimpinan Korporat GLC Watan 2026",
-        "description": "Undergraduate corporate finance and economics scholarship with 4-year GLC bond.",
+        "description": (
+            "Undergraduate corporate finance and economics scholarship with 4-year GLC bond."
+        ),
         "coverage_details": {
             "is_demo": DEMO_FLAG,
             "demo_notice": "FICTIONAL DEMO RECORD - NOT A CURRENT OPPORTUNITY",
@@ -649,7 +667,9 @@ FIXTURE_SCHOLARSHIP_VERSIONS: list[dict[str, Any]] = [
         "application_cycle": "2026 Demo Cycle",
         "version_number": 1,
         "title": "[DEMO FICTIONAL] Tabung Amanah Siswa B40 Keusahawanan & Perakaunan",
-        "description": "Need-based full grant for accounting and finance undergraduates from B40 households.",
+        "description": (
+            "Need-based full grant for accounting and finance undergraduates from B40 households."
+        ),
         "coverage_details": {
             "is_demo": DEMO_FLAG,
             "demo_notice": "FICTIONAL DEMO RECORD - NOT A CURRENT OPPORTUNITY",
@@ -670,7 +690,9 @@ FIXTURE_SCHOLARSHIP_VERSIONS: list[dict[str, Any]] = [
         "application_cycle": "2026 Demo Cycle",
         "version_number": 1,
         "title": "[DEMO FICTIONAL] Biasiswa Khazanah Lestari Undergraduate Merit Award (Simulated)",
-        "description": "Prestigious bond-free merit scholarship for outstanding university scholars.",
+        "description": (
+            "Prestigious bond-free merit scholarship for outstanding university scholars."
+        ),
         "coverage_details": {
             "is_demo": DEMO_FLAG,
             "demo_notice": "FICTIONAL DEMO RECORD - NOT A CURRENT OPPORTUNITY",
@@ -691,7 +713,10 @@ FIXTURE_SCHOLARSHIP_VERSIONS: list[dict[str, Any]] = [
         "application_cycle": "2026 Demo Cycle",
         "version_number": 1,
         "title": "[DEMO FICTIONAL] Geran Penyelidikan Sarjana Kecerdasan Buatan Kebangsaan 2026",
-        "description": "National postgraduate research scholarship for Master's by Research in Artificial Intelligence.",
+        "description": (
+            "National postgraduate research scholarship for Master's by Research in "
+            "Artificial Intelligence."
+        ),
         "coverage_details": {
             "is_demo": DEMO_FLAG,
             "demo_notice": "FICTIONAL DEMO RECORD - NOT A CURRENT OPPORTUNITY",
@@ -732,8 +757,12 @@ FIXTURE_SCHOLARSHIP_VERSIONS: list[dict[str, Any]] = [
         "scholarship_id": "sch-demo-pg-15",
         "application_cycle": "2026 Demo Cycle",
         "version_number": 1,
-        "title": "[DEMO FICTIONAL] Biasiswa Pascasiswazah Kelestarian Alam Sekitar PETRONAS (Simulated)",
-        "description": "Postgraduate fellowship for sustainability engineering and industrial decarbonisation.",
+        "title": (
+            "[DEMO FICTIONAL] Biasiswa Pascasiswazah Kelestarian Alam Sekitar PETRONAS (Simulated)"
+        ),
+        "description": (
+            "Postgraduate fellowship for sustainability engineering and industrial decarbonisation."
+        ),
         "coverage_details": {
             "is_demo": DEMO_FLAG,
             "demo_notice": "FICTIONAL DEMO RECORD - NOT A CURRENT OPPORTUNITY",
@@ -782,7 +811,9 @@ FIXTURE_REQUIREMENTS: list[dict[str, Any]] = [
         "operator": "in",
         "value": ["Secondary", "SPM"],
         "is_mandatory": True,
-        "source_excerpt": "Murid Tingkatan 4 atau Tingkatan 5 di sekolah menengah bantuan kerajaan.",
+        "source_excerpt": (
+            "Murid Tingkatan 4 atau Tingkatan 5 di sekolah menengah bantuan kerajaan."
+        ),
         "is_subjective": False,
     },
     # sch-demo-sec-02: Tunas Harapan MARA
@@ -803,7 +834,9 @@ FIXTURE_REQUIREMENTS: list[dict[str, Any]] = [
         "operator": "in",
         "value": ["Secondary", "SPM"],
         "is_mandatory": True,
-        "source_excerpt": "Calon sedang mengikuti pengajian aliran Sains Tulen sekolah berasrama penuh.",
+        "source_excerpt": (
+            "Calon sedang mengikuti pengajian aliran Sains Tulen sekolah berasrama penuh."
+        ),
         "is_subjective": False,
     },
     # sch-demo-sec-03: Tabung Anak Watan Sarawak
@@ -814,7 +847,9 @@ FIXTURE_REQUIREMENTS: list[dict[str, Any]] = [
         "operator": "eq",
         "value": "Sarawak",
         "is_mandatory": True,
-        "source_excerpt": "Pemohon atau salah seorang ibu/bapa mestilah anak kelahiran negeri Sarawak.",
+        "source_excerpt": (
+            "Pemohon atau salah seorang ibu/bapa mestilah anak kelahiran negeri Sarawak."
+        ),
         "is_subjective": False,
     },
     {
@@ -876,7 +911,9 @@ FIXTURE_REQUIREMENTS: list[dict[str, Any]] = [
         "operator": "eq",
         "value": True,
         "is_mandatory": False,
-        "source_excerpt": "Demonstrated record of co-curricular leadership and character excellence.",
+        "source_excerpt": (
+            "Demonstrated record of co-curricular leadership and character excellence."
+        ),
         "is_subjective": True,
     },
     # sch-demo-preu-06: Matrikulasi Madani
@@ -887,7 +924,9 @@ FIXTURE_REQUIREMENTS: list[dict[str, Any]] = [
         "operator": "gte",
         "value": 3.60,
         "is_mandatory": True,
-        "source_excerpt": "Mencapai sekurang-kurangnya PNGK 3.60 dalam semester terkini matrikulasi.",
+        "source_excerpt": (
+            "Mencapai sekurang-kurangnya PNGK 3.60 dalam semester terkini matrikulasi."
+        ),
         "is_subjective": False,
     },
     {
@@ -897,7 +936,9 @@ FIXTURE_REQUIREMENTS: list[dict[str, Any]] = [
         "operator": "lte",
         "value": 4800.0,
         "is_mandatory": True,
-        "source_excerpt": "Dikhaskan bagi pelajar daripada golongan keluarga B40 (pendapatan RM 4,800 ke bawah).",
+        "source_excerpt": (
+            "Dikhaskan bagi pelajar daripada golongan keluarga B40 (pendapatan RM 4,800 ke bawah)."
+        ),
         "is_subjective": False,
     },
     # sch-demo-preu-07: Bank Pembangunan Commerce
@@ -919,7 +960,9 @@ FIXTURE_REQUIREMENTS: list[dict[str, Any]] = [
         "operator": "gte",
         "value": 3.50,
         "is_mandatory": True,
-        "source_excerpt": "Possess a minimum current CGPA of 3.50 in computer science or software engineering.",
+        "source_excerpt": (
+            "Possess a minimum current CGPA of 3.50 in computer science or software engineering."
+        ),
         "is_subjective": False,
     },
     {
@@ -929,7 +972,10 @@ FIXTURE_REQUIREMENTS: list[dict[str, Any]] = [
         "operator": "in",
         "value": ["Computer Science", "Software Engineering", "Data Analytics"],
         "is_mandatory": True,
-        "source_excerpt": "Course of study must be in Computer Science, Software Engineering, or Artificial Intelligence.",
+        "source_excerpt": (
+            "Course of study must be in Computer Science, Software Engineering, or "
+            "Artificial Intelligence."
+        ),
         "is_subjective": False,
     },
     # sch-demo-ug-09: PETRONAS Green Energy
@@ -971,7 +1017,10 @@ FIXTURE_REQUIREMENTS: list[dict[str, Any]] = [
         "operator": "lte",
         "value": 12000.0,
         "is_mandatory": False,
-        "source_excerpt": "Priority is accorded to applicants from households with monthly gross income under RM 12,000.",
+        "source_excerpt": (
+            "Priority is accorded to applicants from households with monthly "
+            "gross income under RM 12,000."
+        ),
         "is_subjective": False,
     },
     # sch-demo-ug-11: Siswa B40 Perakaunan
@@ -982,7 +1031,10 @@ FIXTURE_REQUIREMENTS: list[dict[str, Any]] = [
         "operator": "lte",
         "value": 4800.0,
         "is_mandatory": True,
-        "source_excerpt": "Pendapatan isi rumah bulanan ibu bapa/penjaga mestilah tidak melebihi paras RM 4,800 sebulan.",
+        "source_excerpt": (
+            "Pendapatan isi rumah bulanan ibu bapa/penjaga mestilah tidak melebihi "
+            "paras RM 4,800 sebulan."
+        ),
         "is_subjective": False,
     },
     {
@@ -1034,7 +1086,9 @@ FIXTURE_REQUIREMENTS: list[dict[str, Any]] = [
         "operator": "in",
         "value": ["Postgraduate", "Master's"],
         "is_mandatory": True,
-        "source_excerpt": "Enrolled in full-time Master's by Research in Artificial Intelligence or Robotics.",
+        "source_excerpt": (
+            "Enrolled in full-time Master's by Research in Artificial Intelligence or Robotics."
+        ),
         "is_subjective": False,
     },
     # sch-demo-pg-14: Khazanah Doctoral Fellowship
@@ -1045,7 +1099,9 @@ FIXTURE_REQUIREMENTS: list[dict[str, Any]] = [
         "operator": "gte",
         "value": 3.85,
         "is_mandatory": True,
-        "source_excerpt": "Master's degree CGPA of at least 3.85 with outstanding research thesis publication.",
+        "source_excerpt": (
+            "Master's degree CGPA of at least 3.85 with outstanding research thesis publication."
+        ),
         "is_subjective": False,
     },
     {
@@ -1055,7 +1111,10 @@ FIXTURE_REQUIREMENTS: list[dict[str, Any]] = [
         "operator": "in",
         "value": ["Postgraduate", "PhD"],
         "is_mandatory": True,
-        "source_excerpt": "Full-time doctoral research degree candidate at an internationally accredited university.",
+        "source_excerpt": (
+            "Full-time doctoral research degree candidate at an internationally "
+            "accredited university."
+        ),
         "is_subjective": False,
     },
     # sch-demo-pg-15: Pascasiswazah Kelestarian PETRONAS
@@ -1066,7 +1125,9 @@ FIXTURE_REQUIREMENTS: list[dict[str, Any]] = [
         "operator": "gte",
         "value": 3.50,
         "is_mandatory": True,
-        "source_excerpt": "Minimum CGPA of 3.50 in engineering, environmental science, or related disciplines.",
+        "source_excerpt": (
+            "Minimum CGPA of 3.50 in engineering, environmental science, or related disciplines."
+        ),
         "is_subjective": False,
     },
     {
@@ -1076,7 +1137,9 @@ FIXTURE_REQUIREMENTS: list[dict[str, Any]] = [
         "operator": "eq",
         "value": "Malaysian",
         "is_mandatory": True,
-        "source_excerpt": "Malaysian citizens committed to 3 years industrial research contribution.",
+        "source_excerpt": (
+            "Malaysian citizens committed to 3 years industrial research contribution."
+        ),
         "is_subjective": False,
     },
 ]
@@ -1130,7 +1193,9 @@ FIXTURE_DOCUMENTS: list[dict[str, Any]] = [
         "id": "doc-demo-pg-14-pub",
         "scholarship_version_id": "ver-demo-pg-14-v1",
         "name": "Doctoral Research Dossier & Academic Publications",
-        "description": "Comprehensive CV, list of peer-reviewed publications, and university offer letter.",
+        "description": (
+            "Comprehensive CV, list of peer-reviewed publications, and university offer letter."
+        ),
         "is_mandatory": True,
         "format_instructions": "Consolidated PDF under 10MB",
     },
