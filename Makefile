@@ -1,4 +1,4 @@
-.PHONY: help dev dev-backend dev-frontend test test-backend test-frontend migrate migrate-create lint lint-backend lint-frontend docker-up docker-down docker-logs seed
+.PHONY: help dev dev-backend dev-frontend test test-backend test-frontend migrate migrate-create lint lint-backend lint-frontend docker-up docker-down docker-logs seed feasibility
 
 help:
 	@echo "ScholarPal Monorepo Automation"
@@ -13,6 +13,7 @@ help:
 	@echo "  make test         Run backend tests (pytest) and frontend checks"
 	@echo "  make migrate      Apply database migrations via Alembic"
 	@echo "  make lint         Run linting (ruff for backend, tsc for frontend)"
+	@echo "  make feasibility  Run source feasibility checklist probe on Malaysian portals"
 
 docker-up:
 	docker compose up --build -d
@@ -57,6 +58,10 @@ lint: lint-backend lint-frontend
 lint-backend:
 	cd backend && ruff check .
 	cd backend && ruff format --check .
+	ruff check scripts
 
 lint-frontend:
 	cd frontend && npx tsc --noEmit
+
+feasibility:
+	python scripts/scholarship_feasibility.py

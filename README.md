@@ -62,7 +62,11 @@ ScholarPal/
 │   ├── architecture.md       # Four-tier system architecture and data flows
 │   ├── non_negotiable_rules.md # The 8 core invariant rules
 │   ├── modules.md            # Detailed breakdown of the 6 domain modules
-│   └── setup.md              # Local developer environment setup guide
+│   ├── setup.md              # Local developer environment setup guide
+│   └── source_feasibility_checklist.md # Malaysian scholarship source feasibility checklist (KPH)
+│
+├── scripts/                  # Automation & diagnostic utility scripts
+│   └── scholarship_feasibility.py # KPH source feasibility probe (robots, render, feeds, data location)
 │
 ├── .env.example              # Sample environment configuration
 ├── Makefile                  # Automated commands: docker-up, test, migrate, lint, seed
@@ -133,6 +137,7 @@ On container startup, `entrypoint.sh`:
 | `make test` | Run pytest suite and frontend production build |
 | `make lint` | Run ruff check, ruff format check, and TypeScript `tsc --noEmit` |
 | `make migrate` | Run Alembic migrations locally |
+| `make feasibility` | Probe official Malaysian scholarship portals and output KPH scored table |
 
 ---
 
