@@ -42,6 +42,9 @@ export interface ComparisonOption {
   totalDocs: number;
 }
 
+// Consistent annual tuition benchmark for tuition-covered award calculations
+const ESTIMATED_ANNUAL_TUITION_VALUE = 20000.0;
+
 export const ComparisonPage: React.FC = () => {
   const [allScholarships] = useState<MockScholarship[]>(getStoredScholarships());
   const [comparisonIds, setComparisonIds] = useState<string[]>(getStoredComparisonIds());
@@ -70,6 +73,16 @@ export const ComparisonPage: React.FC = () => {
     setComparisonIds(getStoredComparisonIds());
   }, []);
 
+  const handleTogglePersonalOffer = (checked: boolean) => {
+    if (checked && comparisonIds.length >= 3) {
+      alert(
+        "Comparison is limited to a maximum of 3 options. Please remove at least one scholarship first before adding your personal offer."
+      );
+      return;
+    }
+    setIncludePersonalOffer(checked);
+  };
+
   const handleRemoveScholarship = (id: string) => {
     const updated = comparisonIds.filter((item) => item !== id);
     setComparisonIds(updated);
@@ -77,8 +90,13 @@ export const ComparisonPage: React.FC = () => {
   };
 
   const handleAddScholarship = (id: string) => {
-    if (comparisonIds.length >= 3) {
-      alert("A maximum of 3 options can be compared simultaneously.");
+    const maxScholarships = includePersonalOffer ? 2 : 3;
+    if (comparisonIds.length >= maxScholarships) {
+      alert(
+        includePersonalOffer
+          ? "A maximum of 3 options (2 scholarships + 1 personal offer) can be compared simultaneously. Please remove a scholarship or uncheck the personal offer first."
+          : "A maximum of 3 scholarships can be compared simultaneously."
+      );
       return;
     }
     if (!comparisonIds.includes(id)) {
@@ -91,14 +109,16 @@ export const ComparisonPage: React.FC = () => {
   // Build list of active options to compare
   const comparedOptions: ComparisonOption[] = [];
 
-  comparisonIds.slice(0, 3).forEach((schId) => {
+  const effectiveScholarshipIds = comparisonIds.slice(0, includePersonalOffer ? 2 : 3);
+  effectiveScholarshipIds.forEach((schId) => {
     const sch = allScholarships.find((s) => s.id === schId);
     if (sch) {
       const app = applications.find((a) => a.scholarship_id === sch.id);
       const readyDocs = app ? app.checklist.filter((c) => c.is_ready).length : 0;
       const totalDocs = sch.required_documents.length;
       const annualAllowance = sch.monthly_allowance * 12;
-      const totalAnnualSupport = annualAllowance + (sch.tuition_covered ? 20000 : 0);
+      const totalAnnualSupport =
+        annualAllowance + (sch.tuition_covered ? ESTIMATED_ANNUAL_TUITION_VALUE : 0);
 
       comparedOptions.push({
         id: sch.id,
@@ -120,10 +140,11 @@ export const ComparisonPage: React.FC = () => {
     }
   });
 
-  // If user enabled personal offer, append it if space allows (or replace 3rd)
+  // If user enabled personal offer, append it as one of the 3 slots
   if (includePersonalOffer && comparedOptions.length < 3) {
     const annualAllowance = personalAllowance * 12;
-    const totalAnnualSupport = annualAllowance + (personalTuitionCovered ? 18000 : 0);
+    const totalAnnualSupport =
+      annualAllowance + (personalTuitionCovered ? ESTIMATED_ANNUAL_TUITION_VALUE : 0);
 
     comparedOptions.push({
       id: "personal-offer-custom",
@@ -162,7 +183,7 @@ export const ComparisonPage: React.FC = () => {
             <input
               type="checkbox"
               checked={includePersonalOffer}
-              onChange={(e) => setIncludePersonalOffer(e.target.checked)}
+              onChange={(e) => handleTogglePersonalOffer(e.target.checked)}
             />
             <span>Include Personal Offer Letter</span>
           </label>

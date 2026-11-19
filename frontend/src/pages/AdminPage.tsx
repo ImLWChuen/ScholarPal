@@ -29,7 +29,8 @@ export const AdminPage: React.FC = () => {
   }, []);
 
   const handleAction = (id: string, newStatus: VersionStatus, actionLabel: string) => {
-    const updated = reviews.map((item) =>
+    const latestReviews = getStoredAdminReviews();
+    const updated = latestReviews.map((item) =>
       item.id === id ? { ...item, review_status: newStatus } : item
     );
     setReviews(updated);
@@ -235,10 +236,10 @@ export const AdminPage: React.FC = () => {
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => handleAction(rev.id, VersionStatus.APPROVED, "approved and published")}
+                    onClick={() => handleAction(rev.id, VersionStatus.APPROVED, "approved")}
                     disabled={rev.review_status === VersionStatus.APPROVED}
                   >
-                    <CheckCircle2 size={14} style={{ marginRight: 4 }} /> Approve & Publish Version
+                    <CheckCircle2 size={14} style={{ marginRight: 4 }} /> Approve Version
                   </Button>
 
                   <Button

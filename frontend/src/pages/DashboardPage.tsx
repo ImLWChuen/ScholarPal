@@ -42,6 +42,14 @@ export const DashboardPage: React.FC = () => {
     setInterviews(getStoredInterviews());
   }, []);
 
+  // Normalizes offset-free timestamps to intended Malaysian Standard Time (UTC+8)
+  const parseInterviewTimestamp = (ts: string): number => {
+    if (!ts.includes("Z") && !/[+-]\d{2}:?\d{2}$/.test(ts)) {
+      return new Date(`${ts}+08:00`).getTime();
+    }
+    return new Date(ts).getTime();
+  };
+
   // Detect Interview Overlaps
   const detectOverlaps = () => {
     const conflicts: { item1: MockInterview; item2: MockInterview }[] = [];
@@ -49,9 +57,9 @@ export const DashboardPage: React.FC = () => {
       for (let j = i + 1; j < interviews.length; j++) {
         const int1 = interviews[i];
         const int2 = interviews[j];
-        const start1 = new Date(int1.scheduled_at).getTime();
+        const start1 = parseInterviewTimestamp(int1.scheduled_at);
         const end1 = start1 + int1.duration_minutes * 60 * 1000;
-        const start2 = new Date(int2.scheduled_at).getTime();
+        const start2 = parseInterviewTimestamp(int2.scheduled_at);
         const end2 = start2 + int2.duration_minutes * 60 * 1000;
 
         if (start1 < end2 && start2 < end1) {
@@ -92,7 +100,9 @@ export const DashboardPage: React.FC = () => {
           <div className="quick-stat">
             <span className="stat-label">Household Income</span>
             <span className="stat-value">
-              {profile.household_income ? `RM ${profile.household_income.toLocaleString()}` : "Not Disclosed"}
+              {profile.household_income !== null && profile.household_income !== undefined
+                ? `RM ${profile.household_income.toLocaleString()}`
+                : "Not Disclosed"}
             </span>
           </div>
           <Link to="/profile">
