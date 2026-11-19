@@ -67,3 +67,10 @@ ScholarPal adheres to a strict 4-tier clean architecture:
 4. **Admin Approval**: Extracted scholarships remain `pending_review` until an admin reviews and approves them.
 5. **Eligibility Evaluation**: When students view scholarships, the deterministic eligibility rule engine evaluates student profile criteria against rules (satisfying rules 1, 2, and 5).
 6. **Application Tracking**: Students track preparation, interview rounds, and note references. When applying, students submit directly on the provider's official portal.
+
+---
+
+## 4. Database Schema & Data Models
+
+The full relational schema, table structures, foreign keys, and uniqueness constraints are documented with a Mermaid ER diagram in [docs/er_diagram.md](er_diagram.md).
+

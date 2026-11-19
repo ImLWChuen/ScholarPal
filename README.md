@@ -60,6 +60,7 @@ ScholarPal/
 │
 ├── docs/                     # Architectural and domain documentation
 │   ├── architecture.md       # Four-tier system architecture and data flows
+│   ├── er_diagram.md         # Mermaid Entity-Relationship (ER) diagram & schema specs
 │   ├── non_negotiable_rules.md # The 8 core invariant rules
 │   ├── modules.md            # Detailed breakdown of the 6 domain modules
 │   ├── setup.md              # Local developer environment setup guide
