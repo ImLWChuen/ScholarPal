@@ -46,6 +46,13 @@ from app.domain.audit_notifications.schemas import (
     ReminderRead,
     ReminderUpdate,
 )
+from app.domain.auth_schemas import (
+    LoginRequest,
+    MessageResponse,
+    RefreshTokenResponse,
+    RegisterRequest,
+    TokenResponse,
+)
 from app.domain.comparison.schemas import (
     ComparisonSetBase,
     ComparisonSetCreate,
@@ -131,6 +138,11 @@ ALL_DOMAIN_SCHEMAS: list[type[BaseModel]] = [
     UserCreate,
     UserUpdate,
     UserRead,
+    RegisterRequest,
+    LoginRequest,
+    TokenResponse,
+    RefreshTokenResponse,
+    MessageResponse,
     StudentProfileBase,
     StudentProfileCreate,
     StudentProfileUpdate,

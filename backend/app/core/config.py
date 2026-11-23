@@ -46,9 +46,19 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
     ]
 
-    # Security
+    # Security & Authentication
     SECRET_KEY: str = "change-this-in-production-super-secret-key-at-least-32-bytes-long"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15  # Short-lived access token (15 mins)
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # Refresh token valid for 7 days
+    REFRESH_COOKIE_NAME: str = "refresh_token"
+    REFRESH_COOKIE_PATH: str = "/api/v1/auth"
+    REFRESH_COOKIE_SAMESITE: str = "lax"
+    REFRESH_COOKIE_SECURE: bool = False
+
+    # Login Rate Limiting
+    LOGIN_RATE_LIMIT_MAX_ATTEMPTS: int = 5
+    LOGIN_RATE_LIMIT_WINDOW_SECONDS: int = 60
 
     # External AI Providers (LLM + Jev)
     LLM_API_KEY: str | None = None
