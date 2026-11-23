@@ -7,15 +7,18 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.api.deps import get_db
 from app.core.db import Base
 from app.core.rate_limiter import login_rate_limiter
+from app.core.security import refresh_session_store
 from app.main import app
 
 
 @pytest.fixture(autouse=True)
 def reset_rate_limiter():
-    """Ensure in-memory login rate limiter is cleared between tests."""
+    """Ensure in-memory login rate limiter and session store are cleared between tests."""
     login_rate_limiter.clear()
+    refresh_session_store.clear()
     yield
     login_rate_limiter.clear()
+    refresh_session_store.clear()
 
 
 @pytest.fixture

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any
 
@@ -59,18 +61,37 @@ class Settings(BaseSettings):
     # Login Rate Limiting
     LOGIN_RATE_LIMIT_MAX_ATTEMPTS: int = 5
     LOGIN_RATE_LIMIT_WINDOW_SECONDS: int = 60
+    TRUSTED_PROXIES: list[str] = [
+        "127.0.0.1",
+        "::1",
+        "localhost",
+        "nginx",
+        "frontend",
+    ]
 
     # External AI Providers (LLM + Jev)
     LLM_API_KEY: str | None = None
     LLM_MODEL: str = "gemini-1.5-pro"
     JEV_API_KEY: str | None = None
 
-    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @field_validator("BACKEND_CORS_ORIGINS", "TRUSTED_PROXIES", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: str | list[str]) -> list[str]:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",") if i.strip()]
         return v
+
+    @model_validator(mode="after")
+    def validate_secret_key(self) -> Settings:
+        dev_environments = {"development", "dev", "test", "testing"}
+        placeholder = "change-this-in-production-super-secret-key-at-least-32-bytes-long"
+        if self.ENVIRONMENT.lower() not in dev_environments:
+            if not self.SECRET_KEY or self.SECRET_KEY == placeholder or len(self.SECRET_KEY) < 32:
+                raise ValueError(
+                    "SECRET_KEY must be a deployment-specific secret of at least 32 characters "
+                    "in non-development environments."
+                )
+        return self
 
     @model_validator(mode="before")
     @classmethod
