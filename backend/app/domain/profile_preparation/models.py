@@ -5,18 +5,13 @@ SQLAlchemy models for Profile and Preparation domain.
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
 from typing import Any
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
-
-
-class UserRole(str, Enum):
-    STUDENT = "student"
-    ADMINISTRATOR = "administrator"
+from app.domain.shared_enums import UserRole
 
 
 class User(Base):
