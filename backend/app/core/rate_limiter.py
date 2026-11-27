@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import contextlib
+import ipaddress
+import socket
 import threading
 import time
 from collections import defaultdict
@@ -117,10 +119,9 @@ class LoginRateLimiter:
             self._attempts[key] = attempts
 
     def reset(self, key: str) -> None:
-        """Reset attempts and reservations for a key upon successful login."""
+        """Reset failed-attempt history for a key upon successful login."""
         with self._lock:
             self._attempts.pop(key, None)
-            self._reservations.pop(key, None)
 
     def clear(self) -> None:
         """Clear all tracked attempts and reservations (useful for tests)."""
@@ -133,6 +134,38 @@ class LoginRateLimiter:
 login_rate_limiter = LoginRateLimiter()
 
 
+def _is_trusted_proxy(peer_host: str) -> bool:
+    """
+    Check if peer_host matches an entry in settings.TRUSTED_PROXIES
+    by exact string, CIDR network, or resolved hostname IP (e.g., Docker nginx hop).
+    """
+    if peer_host in settings.TRUSTED_PROXIES:
+        return True
+
+    try:
+        peer_ip = ipaddress.ip_address(peer_host)
+    except ValueError:
+        return False
+
+    for entry in settings.TRUSTED_PROXIES:
+        try:
+            if "/" in entry:
+                if peer_ip in ipaddress.ip_network(entry, strict=False):
+                    return True
+                continue
+            if ipaddress.ip_address(entry) == peer_ip:
+                return True
+        except ValueError:
+            # Entry is a hostname (e.g., 'nginx', 'frontend', 'localhost')
+            try:
+                _, _, resolved_ips = socket.gethostbyname_ex(entry)
+                if peer_host in resolved_ips:
+                    return True
+            except OSError:
+                continue
+    return False
+
+
 def get_client_ip(request: Request) -> str:
     """
     Extract client IP from request.
@@ -140,7 +173,7 @@ def get_client_ip(request: Request) -> str:
     immediate peer is a trusted proxy in settings.TRUSTED_PROXIES.
     """
     peer_host = request.client.host if request.client else "unknown"
-    if peer_host in settings.TRUSTED_PROXIES:
+    if _is_trusted_proxy(peer_host):
         forwarded_for = request.headers.get("x-forwarded-for")
         if forwarded_for:
             # When trusted proxy rewrites or appends, use the appended value

@@ -90,4 +90,3 @@ async def delete_profile(
             detail="Profile not found",
         )
     return {"message": "Profile deleted successfully"}
-

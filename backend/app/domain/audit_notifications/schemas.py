@@ -8,7 +8,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.domain.common_validators import reject_explicit_nulls
 
 
 # ---------------------------------------------------------------------------
@@ -59,6 +61,10 @@ class NotificationCreate(NotificationBase):
 
 class NotificationUpdate(BaseModel):
     is_read: bool | None = None
+
+    @model_validator(mode="after")
+    def validate_non_nullable_fields(self) -> NotificationUpdate:
+        return reject_explicit_nulls(self, ("is_read",))
 
 
 class NotificationRead(NotificationBase):

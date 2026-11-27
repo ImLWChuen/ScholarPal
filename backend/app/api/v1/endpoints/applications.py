@@ -111,4 +111,3 @@ async def delete_application(
             detail="Application not found",
         )
     return {"message": "Application deleted successfully"}
-

@@ -12,4 +12,3 @@ class NotificationRepository(ScopedRepository[Notification]):
 
 
 notification_repository = NotificationRepository()
-

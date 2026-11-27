@@ -10,8 +10,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.domain.common_validators import reject_explicit_nulls
 from app.domain.shared_enums import ApplicationStage
 
 
@@ -40,6 +41,10 @@ class ApplicationUpdate(BaseModel):
     submission_reference: str | None = None
     portal_submission_reference: str | None = None
     notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_non_nullable_fields(self) -> ApplicationUpdate:
+        return reject_explicit_nulls(self, ("stage",))
 
 
 class ApplicationRead(ApplicationBase):
@@ -76,6 +81,10 @@ class ApplicationTaskUpdate(BaseModel):
     task_key: str | None = None
     is_completed: bool | None = None
     due_date: datetime | None = None
+
+    @model_validator(mode="after")
+    def validate_non_nullable_fields(self) -> ApplicationTaskUpdate:
+        return reject_explicit_nulls(self, ("title", "task_key", "is_completed"))
 
 
 class ApplicationTaskRead(ApplicationTaskBase):
@@ -127,7 +136,6 @@ class InterviewBase(BaseModel):
     location_or_link: str | None = None
     round_name: str = "First Round"
     status: str = "scheduled"  # scheduled, completed, cancelled, rescheduled
-    prep_notes: str | None = None
     feedback: str | None = None
 
 
@@ -140,8 +148,11 @@ class InterviewUpdate(BaseModel):
     location_or_link: str | None = None
     round_name: str | None = None
     status: str | None = None
-    prep_notes: str | None = None
     feedback: str | None = None
+
+    @model_validator(mode="after")
+    def validate_non_nullable_fields(self) -> InterviewUpdate:
+        return reject_explicit_nulls(self, ("scheduled_at", "round_name", "status"))
 
 
 class InterviewRead(InterviewBase):
@@ -161,7 +172,6 @@ class AwardOfferBase(BaseModel):
     bond_duration_years: int | None = Field(default=None, ge=0)
     decision: str = "pending"  # pending, accepted, declined
     decision_deadline: datetime | None = None
-    terms_summary: str | None = None
 
 
 class AwardOfferCreate(AwardOfferBase):
@@ -174,7 +184,10 @@ class AwardOfferUpdate(BaseModel):
     bond_duration_years: int | None = Field(default=None, ge=0)
     decision: str | None = None
     decision_deadline: datetime | None = None
-    terms_summary: str | None = None
+
+    @model_validator(mode="after")
+    def validate_non_nullable_fields(self) -> AwardOfferUpdate:
+        return reject_explicit_nulls(self, ("currency", "decision"))
 
 
 class AwardOfferRead(AwardOfferBase):

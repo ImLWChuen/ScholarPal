@@ -109,4 +109,3 @@ async def delete_notification(
             detail="Notification not found",
         )
     return {"message": "Notification deleted successfully"}
-

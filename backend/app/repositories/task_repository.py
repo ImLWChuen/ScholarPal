@@ -17,4 +17,3 @@ class TaskRepository(ScopedRepository[ApplicationTask]):
 
 
 task_repository = TaskRepository()
-

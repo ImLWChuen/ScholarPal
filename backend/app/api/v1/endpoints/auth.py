@@ -174,13 +174,6 @@ async def refresh(
             detail="Invalid token claims",
         )
 
-    if not refresh_session_store.is_session_active(sid, jti):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token has been revoked or already consumed",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
     user = await db.scalar(select(User).where(User.id == user_id))
     if not user or not user.is_active:
         raise HTTPException(

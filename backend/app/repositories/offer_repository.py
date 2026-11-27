@@ -17,4 +17,3 @@ class OfferRepository(ScopedRepository[AwardOffer]):
 
 
 offer_repository = OfferRepository()
-
