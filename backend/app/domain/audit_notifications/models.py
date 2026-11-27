@@ -16,7 +16,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, synonym
 
 from app.core.db import Base
 
@@ -63,6 +63,7 @@ class Notification(Base):
         String, default="general", nullable=False, index=True
     )
     reference_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    link = synonym("reference_url")
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
