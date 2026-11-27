@@ -119,6 +119,42 @@ class StudentProfileCreate(StudentProfileBase):
     id: str | None = None
 
 
+class StudentProfileCreateRequest(BaseModel):
+    """Request schema for creating a student profile (user_id derived from auth token)."""
+
+    id: str | None = None
+    study_level: str | None = None
+    education_level: str | None = None
+    nationality: str | None = None
+    citizenship: str | None = None
+    state_of_origin: str | None = None
+    field_of_study: str | None = None
+    intended_field: str | None = None
+    academic_results: dict[str, Any] | None = None
+    household_income: float | None = Field(default=None, ge=0.0)
+    cgpa: float | None = Field(default=None, ge=0.0, le=4.0)
+
+    @field_validator("cgpa", mode="before")
+    @classmethod
+    def check_cgpa(cls, v: Any) -> float | None:
+        return validate_cgpa_range(v)
+
+    @field_validator("household_income", mode="before")
+    @classmethod
+    def check_income(cls, v: Any) -> float | None:
+        return validate_non_negative_income(v)
+
+    @field_validator("study_level", "education_level", mode="before")
+    @classmethod
+    def check_study_level(cls, v: Any) -> str | None:
+        return normalize_and_validate_study_level(v)
+
+    @field_validator("academic_results", mode="before")
+    @classmethod
+    def check_results(cls, v: Any) -> dict[str, Any] | None:
+        return validate_academic_results_dict(v)
+
+
 class StudentProfileUpdate(BaseModel):
     study_level: str | None = None
     education_level: str | None = None

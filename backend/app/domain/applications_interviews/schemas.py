@@ -103,7 +103,7 @@ class DocumentChecklistItemBase(BaseModel):
     required_document_id: str
     file_path: str | None = None
     file_name: str | None = None
-    is_verified: bool = False
+    is_ready: bool = False
     notes: str | None = None
 
 
@@ -111,18 +111,51 @@ class DocumentChecklistItemCreate(DocumentChecklistItemBase):
     id: str | None = None
 
 
+class DocumentChecklistItemCreateRequest(BaseModel):
+    """Request schema for creating a checklist item under an application."""
+
+    id: str | None = None
+    required_document_id: str
+    file_path: str | None = None
+    file_name: str | None = None
+    is_ready: bool = False
+    notes: str | None = None
+
+
 class DocumentChecklistItemUpdate(BaseModel):
     file_path: str | None = None
     file_name: str | None = None
-    is_verified: bool | None = None
+    is_ready: bool | None = None
     uploaded_at: datetime | None = None
     notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_non_nullable_fields(self) -> DocumentChecklistItemUpdate:
+        return reject_explicit_nulls(self, ("is_ready",))
 
 
 class DocumentChecklistItemRead(DocumentChecklistItemBase):
     id: str
     uploaded_at: datetime | None = None
     created_at: datetime
+
+
+class DocumentReadinessRead(BaseModel):
+    """Document readiness calculation result for an application."""
+
+    ready_count: int
+    total_required: int | None
+    readiness_percentage: float | None
+    status: str
+    display: str
+
+
+class ApplicationChecklistRead(BaseModel):
+    """Checklist items and computed document readiness for a saved application."""
+
+    application_id: str
+    readiness: DocumentReadinessRead
+    items: list[DocumentChecklistItemRead]
 
 
 # ---------------------------------------------------------------------------
