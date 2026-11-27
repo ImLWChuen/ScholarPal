@@ -24,14 +24,28 @@ class RefreshSessionStore:
 
     def __init__(self) -> None:
         self._sessions: dict[str, dict[str, Any]] = {}
+        self._cleanup_counter: int = 0
         self._lock = threading.Lock()
 
+    def _maybe_evict_expired_sessions(self, now: float) -> None:
+        """Periodically evict expired session records while holding _lock."""
+        self._cleanup_counter += 1
+        if self._cleanup_counter < 50:
+            return
+        self._cleanup_counter = 0
+        expired_sids = [
+            sid for sid, session in self._sessions.items() if now > session["expires_at"]
+        ]
+        for sid in expired_sids:
+            self._sessions.pop(sid, None)
+
     def create_session(self, user_id: str, sid: str, jti: str, expires_at: float) -> None:
+        now = time.time()
         with self._lock:
+            self._maybe_evict_expired_sessions(now)
             self._sessions[sid] = {
                 "user_id": user_id,
                 "current_jti": jti,
-                "revoked": False,
                 "expires_at": expires_at,
             }
 
@@ -43,13 +57,18 @@ class RefreshSessionStore:
         expires_at: float,
     ) -> bool:
         """Atomically consume submitted_jti and update session to new_jti."""
+        now = time.time()
         with self._lock:
+            self._maybe_evict_expired_sessions(now)
             session = self._sessions.get(sid)
-            if not session or session["revoked"]:
+            if not session:
+                return False
+            if now > session["expires_at"]:
+                self._sessions.pop(sid, None)
                 return False
             if session["current_jti"] != submitted_jti:
-                # Token reuse detected -> revoke the entire session
-                session["revoked"] = True
+                # Token reuse detected -> revoke and remove the entire session
+                self._sessions.pop(sid, None)
                 return False
             session["current_jti"] = new_jti
             session["expires_at"] = expires_at
@@ -57,26 +76,26 @@ class RefreshSessionStore:
 
     def revoke_session(self, sid: str) -> bool:
         with self._lock:
-            session = self._sessions.get(sid)
-            if session:
-                session["revoked"] = True
-                return True
-            return False
+            return self._sessions.pop(sid, None) is not None
 
     def is_session_active(self, sid: str, jti: str) -> bool:
+        now = time.time()
         with self._lock:
+            self._maybe_evict_expired_sessions(now)
             session = self._sessions.get(sid)
-            if not session or session["revoked"]:
+            if not session:
                 return False
             if session["current_jti"] != jti:
                 return False
-            if time.time() > session["expires_at"]:
+            if now > session["expires_at"]:
+                self._sessions.pop(sid, None)
                 return False
             return True
 
     def clear(self) -> None:
         with self._lock:
             self._sessions.clear()
+            self._cleanup_counter = 0
 
 
 refresh_session_store = RefreshSessionStore()

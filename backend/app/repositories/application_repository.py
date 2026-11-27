@@ -12,4 +12,3 @@ class ApplicationRepository(ScopedRepository[Application]):
 
 
 application_repository = ApplicationRepository()
-

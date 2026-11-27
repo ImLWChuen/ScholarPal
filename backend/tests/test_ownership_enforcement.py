@@ -296,6 +296,11 @@ async def test_update_other_student_record_returns_404_not_403(
     headers_b = {"Authorization": f"Bearer {seed_ownership_data['student_b_token']}"}
     headers_a = {"Authorization": f"Bearer {seed_ownership_data['student_a_token']}"}
 
+    # Capture Student A's record fields before Student B's rejected requests
+    resp_before = await async_client.get(f"{base_url}/{target_record_id}", headers=headers_a)
+    assert resp_before.status_code == 200
+    before_record = resp_before.json()
+
     # 1. Student B attempts PUT on Student A's record -> 404
     resp_b_put = await async_client.put(
         f"{base_url}/{target_record_id}", json=update_payload, headers=headers_b
@@ -317,6 +322,9 @@ async def test_update_other_student_record_returns_404_not_403(
     # 3. Verify Student A's record was NOT mutated
     resp_verify = await async_client.get(f"{base_url}/{target_record_id}", headers=headers_a)
     assert resp_verify.status_code == 200
+    assert resp_verify.json() == before_record, (
+        f"{entity_name} fields were unexpectedly mutated after rejected requests!"
+    )
 
     # 4. Legitimate owner Student A updates own record -> 200
     resp_a_put = await async_client.put(
@@ -537,3 +545,54 @@ async def test_repository_layer_ownership_scoping_isolation(
             is None
         )
 
+
+@pytest.mark.parametrize(
+    "endpoint,record_id,null_payload,nullable_payload",
+    [
+        (
+            "/api/v1/applications",
+            STUDENT_A_RECORDS["application"],
+            {"stage": None},
+            {"notes": None},
+        ),
+        (
+            "/api/v1/tasks",
+            STUDENT_A_RECORDS["task"],
+            {"title": None},
+            {"description": None},
+        ),
+        (
+            "/api/v1/interviews",
+            STUDENT_A_RECORDS["interview"],
+            {"status": None},
+            {"location_or_link": None},
+        ),
+        (
+            "/api/v1/notifications",
+            STUDENT_A_RECORDS["notification"],
+            {"is_read": None},
+            None,
+        ),
+    ],
+)
+async def test_update_rejects_explicit_null_on_non_nullable_fields(
+    async_client: AsyncClient,
+    seed_ownership_data: dict[str, str],
+    endpoint: str,
+    record_id: str,
+    null_payload: dict[str, Any],
+    nullable_payload: dict[str, Any] | None,
+) -> None:
+    """Explicit null for non-nullable fields must be rejected (422); nullable fields accept null."""
+    headers_a = {"Authorization": f"Bearer {seed_ownership_data['student_a_token']}"}
+
+    resp_bad = await async_client.patch(
+        f"{endpoint}/{record_id}", json=null_payload, headers=headers_a
+    )
+    assert resp_bad.status_code == 422
+
+    if nullable_payload is not None:
+        resp_ok = await async_client.patch(
+            f"{endpoint}/{record_id}", json=nullable_payload, headers=headers_a
+        )
+        assert resp_ok.status_code == 200

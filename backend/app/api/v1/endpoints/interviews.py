@@ -58,7 +58,7 @@ async def create_interview(
         scheduled_at=interview_in.scheduled_at,
         location_or_url=interview_in.location_or_link,
         status=interview_in.status,
-        feedback_or_notes=interview_in.feedback or interview_in.prep_notes,
+        feedback_or_notes=interview_in.feedback,
     )
     return await interview_repository.create(db, interview_obj)
 
@@ -122,4 +122,3 @@ async def delete_interview(
             detail="Interview not found",
         )
     return {"message": "Interview deleted successfully"}
-

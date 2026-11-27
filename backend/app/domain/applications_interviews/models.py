@@ -162,6 +162,7 @@ class DocumentChecklistItem(Base):
     file_path: Mapped[str | None] = mapped_column(String, nullable=True)
     file_name: Mapped[str | None] = mapped_column(String, nullable=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_ready = synonym("is_verified")
     uploaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -232,7 +233,6 @@ class Interview(Base):
     status: Mapped[str] = mapped_column(String, default="scheduled", nullable=False, index=True)
     feedback_or_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     feedback = synonym("feedback_or_notes")
-    prep_notes = synonym("feedback_or_notes")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

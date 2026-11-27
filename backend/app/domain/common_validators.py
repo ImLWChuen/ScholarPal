@@ -170,3 +170,11 @@ def validate_academic_results_dict(results: Any) -> dict[str, Any] | None:
             validate_grade_value(v)
 
     return results
+
+
+def reject_explicit_nulls(model: Any, non_nullable_fields: tuple[str, ...]) -> Any:
+    """Reject explicitly supplied null values for non-nullable update schema fields."""
+    for field in non_nullable_fields:
+        if field in model.model_fields_set and getattr(model, field) is None:
+            raise ValueError(f"'{field}' cannot be null.")
+    return model

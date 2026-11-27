@@ -120,4 +120,3 @@ async def delete_task(
             detail="Task not found",
         )
     return {"message": "Task deleted successfully"}
-

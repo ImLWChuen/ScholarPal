@@ -48,4 +48,3 @@ class ProfileRepository(ScopedRepository[StudentProfile]):
 
 
 profile_repository = ProfileRepository()
-
