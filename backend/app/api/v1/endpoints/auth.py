@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 from uuid import uuid4
 
+import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +16,8 @@ from app.core.security import (
     create_refresh_token,
     decode_token,
     get_password_hash,
+    refresh_session_store,
+    rotate_refresh_token,
     verify_password,
 )
 from app.domain.auth_schemas import (
@@ -34,7 +38,7 @@ router = APIRouter()
     "/register",
     response_model=UserRead,
     status_code=status.HTTP_201_CREATED,
-    summary="Register a new user account",
+    summary="Register a new user account (always student role)",
 )
 async def register(
     data: RegisterRequest,
@@ -49,12 +53,15 @@ async def register(
             detail="Email already registered",
         )
 
+    # Public registration strictly assigns the student role
+    role_str = UserRole.STUDENT.value
     user_id = f"usr-{uuid4()}"
-    role_str = data.role.value if hasattr(data.role, "value") else str(data.role)
+    hashed_pwd = await asyncio.to_thread(get_password_hash, data.password)
+
     new_user = User(
         id=user_id,
         email=email_clean,
-        hashed_password=get_password_hash(data.password),
+        hashed_password=hashed_pwd,
         full_name=data.full_name,
         role=role_str,
         is_active=True,
@@ -62,12 +69,11 @@ async def register(
     )
     db.add(new_user)
 
-    if role_str == UserRole.STUDENT.value:
-        profile = StudentProfile(
-            id=f"prof-{uuid4()}",
-            user_id=user_id,
-        )
-        db.add(profile)
+    profile = StudentProfile(
+        id=f"prof-{uuid4()}",
+        user_id=user_id,
+    )
+    db.add(profile)
 
     await db.commit()
     await db.refresh(new_user)
@@ -86,25 +92,33 @@ async def login(
     db: AsyncSession = Depends(get_db),
 ) -> TokenResponse:
     rate_key = get_login_rate_limit_key(request, data.email)
-    login_rate_limiter.check_rate_limit(rate_key)
 
-    email_clean = data.email.lower().strip()
-    user = await db.scalar(select(User).where(User.email == email_clean))
+    with login_rate_limiter.reserve_attempt(rate_key):
+        email_clean = data.email.lower().strip()
+        user = await db.scalar(select(User).where(User.email == email_clean))
 
-    if not user or not verify_password(data.password, user.hashed_password):
-        login_rate_limiter.record_failed_attempt(rate_key)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
-        )
+        password_ok = False
+        if user:
+            password_ok = await asyncio.to_thread(
+                verify_password,
+                data.password,
+                user.hashed_password,
+            )
 
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Inactive user account",
-        )
+        if not user or not password_ok:
+            login_rate_limiter.record_failed_attempt(rate_key)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password",
+            )
 
-    login_rate_limiter.reset(rate_key)
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Inactive user account",
+            )
+
+        login_rate_limiter.reset(rate_key)
 
     access_token = create_access_token(subject=user.id, role=user.role)
     refresh_token = create_refresh_token(subject=user.id)
@@ -152,10 +166,19 @@ async def refresh(
         )
 
     user_id = payload.get("sub")
-    if not user_id:
+    sid = payload.get("sid")
+    jti = payload.get("jti")
+    if not user_id or not sid or not jti:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token claims",
+        )
+
+    if not refresh_session_store.is_session_active(sid, jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has been revoked or already consumed",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     user = await db.scalar(select(User).where(User.id == user_id))
@@ -166,7 +189,11 @@ async def refresh(
         )
 
     new_access_token = create_access_token(subject=user.id, role=user.role)
-    new_refresh_token = create_refresh_token(subject=user.id)
+    new_refresh_token = rotate_refresh_token(
+        subject=user.id,
+        session_id=sid,
+        submitted_jti=jti,
+    )
 
     response.set_cookie(
         key=settings.REFRESH_COOKIE_NAME,
@@ -188,9 +215,27 @@ async def refresh(
 @router.post(
     "/logout",
     response_model=MessageResponse,
-    summary="Clear refresh token cookie and invalidate session",
+    summary="Clear refresh token cookie and invalidate server-side session",
 )
-async def logout(response: Response) -> MessageResponse:
+async def logout(
+    request: Request,
+    response: Response,
+) -> MessageResponse:
+    token = request.cookies.get(settings.REFRESH_COOKIE_NAME)
+    if token:
+        try:
+            payload = jwt.decode(
+                token,
+                settings.SECRET_KEY,
+                algorithms=[settings.JWT_ALGORITHM],
+                options={"verify_exp": False},
+            )
+            sid = payload.get("sid")
+            if sid:
+                refresh_session_store.revoke_session(sid)
+        except Exception:
+            pass
+
     response.delete_cookie(
         key=settings.REFRESH_COOKIE_NAME,
         path=settings.REFRESH_COOKIE_PATH,

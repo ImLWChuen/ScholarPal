@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import threading
+import time
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
@@ -14,13 +16,79 @@ from app.core.config import settings
 _hasher = PasswordHasher()
 
 
+class RefreshSessionStore:
+    """
+    Thread-safe in-memory store for refresh token sessions.
+    Tracks active sessions, single-use token consumption, and revocation.
+    """
+
+    def __init__(self) -> None:
+        self._sessions: dict[str, dict[str, Any]] = {}
+        self._lock = threading.Lock()
+
+    def create_session(self, user_id: str, sid: str, jti: str, expires_at: float) -> None:
+        with self._lock:
+            self._sessions[sid] = {
+                "user_id": user_id,
+                "current_jti": jti,
+                "revoked": False,
+                "expires_at": expires_at,
+            }
+
+    def rotate_session(
+        self,
+        sid: str,
+        submitted_jti: str,
+        new_jti: str,
+        expires_at: float,
+    ) -> bool:
+        """Atomically consume submitted_jti and update session to new_jti."""
+        with self._lock:
+            session = self._sessions.get(sid)
+            if not session or session["revoked"]:
+                return False
+            if session["current_jti"] != submitted_jti:
+                # Token reuse detected -> revoke the entire session
+                session["revoked"] = True
+                return False
+            session["current_jti"] = new_jti
+            session["expires_at"] = expires_at
+            return True
+
+    def revoke_session(self, sid: str) -> bool:
+        with self._lock:
+            session = self._sessions.get(sid)
+            if session:
+                session["revoked"] = True
+                return True
+            return False
+
+    def is_session_active(self, sid: str, jti: str) -> bool:
+        with self._lock:
+            session = self._sessions.get(sid)
+            if not session or session["revoked"]:
+                return False
+            if session["current_jti"] != jti:
+                return False
+            if time.time() > session["expires_at"]:
+                return False
+            return True
+
+    def clear(self) -> None:
+        with self._lock:
+            self._sessions.clear()
+
+
+refresh_session_store = RefreshSessionStore()
+
+
 def get_password_hash(password: str) -> str:
-    """Hash a password using argon2."""
+    """Hash a password synchronously using argon2."""
     return _hasher.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a plain password against an argon2 hash."""
+    """Verify a plain password against an argon2 hash synchronously."""
     if not plain_password or not hashed_password:
         return False
     try:
@@ -58,23 +126,79 @@ def create_access_token(
 
 def create_refresh_token(
     subject: str,
+    session_id: str | None = None,
     expires_delta: timedelta | None = None,
 ) -> str:
-    """Generate a long-lived JWT refresh token."""
+    """
+    Generate a long-lived JWT refresh token bound to a server-side session.
+    Registers the session with refresh_session_store.
+    """
     now = datetime.now(UTC)
     if expires_delta:
         expire = now + expires_delta
     else:
         expire = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
 
+    sid = session_id or str(uuid4())
+    jti = str(uuid4())
+
     payload: dict[str, Any] = {
         "sub": str(subject),
+        "sid": sid,
         "type": "refresh",
         "iat": int(now.timestamp()),
         "exp": int(expire.timestamp()),
-        "jti": str(uuid4()),
+        "jti": jti,
     }
 
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    refresh_session_store.create_session(
+        user_id=str(subject),
+        sid=sid,
+        jti=jti,
+        expires_at=expire.timestamp(),
+    )
+    return token
+
+
+def rotate_refresh_token(
+    subject: str,
+    session_id: str,
+    submitted_jti: str,
+    expires_delta: timedelta | None = None,
+) -> str:
+    """
+    Atomically consume the submitted refresh token and issue a replacement.
+    Raises 401 if the token has already been consumed or revoked.
+    """
+    now = datetime.now(UTC)
+    if expires_delta:
+        expire = now + expires_delta
+    else:
+        expire = now + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+
+    new_jti = str(uuid4())
+    success = refresh_session_store.rotate_session(
+        sid=session_id,
+        submitted_jti=submitted_jti,
+        new_jti=new_jti,
+        expires_at=expire.timestamp(),
+    )
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token has been revoked or already consumed",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    payload: dict[str, Any] = {
+        "sub": str(subject),
+        "sid": session_id,
+        "type": "refresh",
+        "iat": int(now.timestamp()),
+        "exp": int(expire.timestamp()),
+        "jti": new_jti,
+    }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 

@@ -227,9 +227,12 @@ class Interview(Base):
         DateTime(timezone=True), nullable=False, index=True
     )
     location_or_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    location_or_link = synonym("location_or_url")
     format: Mapped[str] = mapped_column(String, default="in-person", nullable=False)
     status: Mapped[str] = mapped_column(String, default="scheduled", nullable=False, index=True)
     feedback_or_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    feedback = synonym("feedback_or_notes")
+    prep_notes = synonym("feedback_or_notes")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -261,9 +264,12 @@ class AwardOffer(Base):
     response_deadline: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    decision_deadline = synonym("response_deadline")
     # Decision e.g. "pending", "accepted", "declined"
     decision: Mapped[str] = mapped_column(String, default="pending", nullable=False, index=True)
     decision_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    decided_at = synonym("decision_date")
+    received_at = synonym("created_at")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

@@ -3,7 +3,6 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.profile_preparation.schemas import UserRead
-from app.domain.shared_enums import UserRole
 
 
 class RegisterRequest(BaseModel):
@@ -12,10 +11,6 @@ class RegisterRequest(BaseModel):
     email: str = Field(..., max_length=255, description="Unique email address")
     password: str = Field(..., min_length=6, description="User password")
     full_name: str = Field(..., min_length=1, max_length=255, description="Full name")
-    role: UserRole = Field(
-        default=UserRole.STUDENT,
-        description="Role assigned to the user",
-    )
 
 
 class LoginRequest(BaseModel):
