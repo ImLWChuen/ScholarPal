@@ -1,48 +1,84 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import {
-  getStoredProfile,
-  getStoredApplications,
-  getStoredScholarships,
-  getStoredInterviews,
-  evaluateEligibility,
-  MockStudentProfile,
-  MockApplication,
-  MockScholarship,
-  MockInterview,
-} from "../mock/mockData";
-import { OverallEligibility, ApplicationStage } from "../types";
-import { Card, Badge, Button } from "../components/ui";
-import { ReadinessBar } from "../components/ReadinessBar";
-import { StageBadge, OverallEligibilityBadge } from "../components/StatusBadges";
-import {
-  User,
-  Search,
-  KanbanSquare,
-  Calendar,
-  Scale,
+  AlertCircle,
   AlertTriangle,
   ArrowRight,
-  CheckCircle2,
-  Clock,
+  Calendar,
+  KanbanSquare,
+  Scale,
+  Search,
   Sparkles,
-  ExternalLink,
+  User,
 } from "lucide-react";
+import { ApiError } from "../api/client";
+import {
+  ApplicationChecklistDto,
+  ApplicationDto,
+  fetchApplicationChecklist,
+  fetchApplications,
+  fetchInterviews,
+  InterviewDto,
+} from "../api/dashboard";
+import { fetchMyProfile, StudentProfileDto } from "../api/profile";
+import { ReadinessBar } from "../components/ReadinessBar";
+import { StageBadge } from "../components/StatusBadges";
+import { Button, Card } from "../components/ui";
+import { useAuth } from "../features/auth/AuthContext";
+import { ApplicationStage } from "../types";
 
 export const DashboardPage: React.FC = () => {
-  const [profile, setProfile] = useState<MockStudentProfile>(getStoredProfile());
-  const [applications, setApplications] = useState<MockApplication[]>(getStoredApplications());
-  const [scholarships, setScholarships] = useState<MockScholarship[]>(getStoredScholarships());
-  const [interviews, setInterviews] = useState<MockInterview[]>(getStoredInterviews());
+  const { user } = useAuth();
 
-  useEffect(() => {
-    setProfile(getStoredProfile());
-    setApplications(getStoredApplications());
-    setScholarships(getStoredScholarships());
-    setInterviews(getStoredInterviews());
-  }, []);
+  const profileQuery = useQuery<StudentProfileDto | null, ApiError>({
+    queryKey: ["my-profile"],
+    queryFn: async () => {
+      try {
+        return await fetchMyProfile();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) {
+          return null;
+        }
+        throw err;
+      }
+    },
+  });
 
-  // Normalizes offset-free timestamps to intended Malaysian Standard Time (UTC+8)
+  const applicationsQuery = useQuery<ApplicationDto[], ApiError>({
+    queryKey: ["applications"],
+    queryFn: fetchApplications,
+  });
+
+  const interviewsQuery = useQuery<InterviewDto[], ApiError>({
+    queryKey: ["interviews"],
+    queryFn: fetchInterviews,
+  });
+
+  const applications = applicationsQuery.data ?? [];
+  const interviews = interviewsQuery.data ?? [];
+  const profile = profileQuery.data ?? null;
+
+  const checklistQueries = useQueries({
+    queries: applications.map((app) => ({
+      queryKey: ["application-checklist", app.id],
+      queryFn: () => fetchApplicationChecklist(app.id),
+      enabled: applications.length > 0,
+    })),
+  });
+
+  const checklistByAppId = new Map<string, ApplicationChecklistDto>();
+  applications.forEach((app, idx) => {
+    const res = checklistQueries[idx]?.data;
+    if (res) {
+      checklistByAppId.set(app.id, res);
+    }
+  });
+
+  const isLoading =
+    profileQuery.isLoading || applicationsQuery.isLoading || interviewsQuery.isLoading;
+  const firstError = profileQuery.error || applicationsQuery.error || interviewsQuery.error;
+
   const parseInterviewTimestamp = (ts: string): number => {
     if (!ts.includes("Z") && !/[+-]\d{2}:?\d{2}$/.test(ts)) {
       return new Date(`${ts}+08:00`).getTime();
@@ -50,17 +86,17 @@ export const DashboardPage: React.FC = () => {
     return new Date(ts).getTime();
   };
 
-  // Detect Interview Overlaps
   const detectOverlaps = () => {
-    const conflicts: { item1: MockInterview; item2: MockInterview }[] = [];
+    const DEFAULT_DURATION_MS = 60 * 60 * 1000;
+    const conflicts: { item1: InterviewDto; item2: InterviewDto }[] = [];
     for (let i = 0; i < interviews.length; i++) {
       for (let j = i + 1; j < interviews.length; j++) {
         const int1 = interviews[i];
         const int2 = interviews[j];
         const start1 = parseInterviewTimestamp(int1.scheduled_at);
-        const end1 = start1 + int1.duration_minutes * 60 * 1000;
+        const end1 = start1 + DEFAULT_DURATION_MS;
         const start2 = parseInterviewTimestamp(int2.scheduled_at);
-        const end2 = start2 + int2.duration_minutes * 60 * 1000;
+        const end2 = start2 + DEFAULT_DURATION_MS;
 
         if (start1 < end2 && start2 < end1) {
           conflicts.push({ item1: int1, item2: int2 });
@@ -72,35 +108,61 @@ export const DashboardPage: React.FC = () => {
 
   const conflicts = detectOverlaps();
 
-  // Calculate Eligibility Match Counts
-  const eligibleMatches = scholarships.filter((s) => {
-    const res = evaluateEligibility(s, profile);
-    return res.overall === OverallEligibility.MEETS_RECORDED_REQUIREMENTS;
-  }).length;
+  if (isLoading) {
+    return (
+      <div className="auth-loading-state" role="status" aria-live="polite">
+        <div className="loading-spinner" />
+        <p>Loading your ScholarPal dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="page-dashboard">
+      {firstError && (
+        <div className="alert-banner danger-banner" role="alert">
+          <AlertCircle size={18} />
+          <span>{firstError.message || "Failed to load dashboard data."}</span>
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            onClick={() => {
+              profileQuery.refetch();
+              applicationsQuery.refetch();
+              interviewsQuery.refetch();
+            }}
+          >
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* Student Welcome & Overview Header */}
       <div className="dashboard-welcome-banner">
         <div>
-          <h2>Selamat Datang, {profile.full_name} 👋</h2>
+          <h2>Selamat Datang, {user?.full_name || "Student"}</h2>
           <p className="dashboard-subtitle">
-            ScholarPal student workspace & advisory hub. Track requirements, simulate eligibility, and prepare official submissions.
+            ScholarPal student workspace & advisory hub. Track requirements, checklist readiness, and official submissions.
           </p>
         </div>
         <div className="profile-quick-stats">
           <div className="quick-stat">
             <span className="stat-label">Current CGPA</span>
-            <span className="stat-value">{profile.cgpa.toFixed(2)}</span>
+            <span className="stat-value">
+              {profile?.cgpa !== null && profile?.cgpa !== undefined
+                ? profile.cgpa.toFixed(2)
+                : "Not Set"}
+            </span>
           </div>
           <div className="quick-stat">
             <span className="stat-label">Study Level</span>
-            <span className="stat-value">{profile.study_level}</span>
+            <span className="stat-value">{profile?.study_level || "Not Set"}</span>
           </div>
           <div className="quick-stat">
             <span className="stat-label">Household Income</span>
             <span className="stat-value">
-              {profile.household_income !== null && profile.household_income !== undefined
+              {profile?.household_income !== null && profile?.household_income !== undefined
                 ? `RM ${profile.household_income.toLocaleString()}`
                 : "Not Disclosed"}
             </span>
@@ -118,94 +180,40 @@ export const DashboardPage: React.FC = () => {
         <div className="alert-banner warning-banner">
           <AlertTriangle className="alert-icon" size={24} />
           <div className="alert-content">
-            <h4>⚠️ Critical Interview Scheduling Conflict Detected</h4>
+            <h4>Interview Scheduling Conflict Detected</h4>
             <p>
-              You have {conflicts.length} overlapping interview session(s).{" "}
-              <strong>{conflicts[0].item1.scholarship_title}</strong> conflicts with{" "}
-              <strong>{conflicts[0].item2.scholarship_title}</strong> on{" "}
+              You have {conflicts.length} overlapping interview session(s):{" "}
+              <strong>{conflicts[0].item1.round_name}</strong> conflicts with{" "}
+              <strong>{conflicts[0].item2.round_name}</strong> on{" "}
               {new Date(conflicts[0].item1.scheduled_at).toLocaleDateString("en-GB", {
                 day: "numeric",
                 month: "short",
                 year: "numeric",
-              })}.
+              })}
+              .
             </p>
           </div>
           <Link to="/interviews">
             <Button variant="danger" size="sm">
-              Resolve Conflict Now
+              Resolve Conflict
             </Button>
           </Link>
         </div>
       )}
-
-      {/* Student User Journey Stepper (Figure 11) */}
-      <Card
-        title="Student User Journey Flow"
-        subtitle="Follow the recommended systematic progression to discover, evaluate, and track your scholarships"
-        className="journey-card"
-      >
-        <div className="journey-stepper">
-          <Link to="/profile" className="journey-step completed">
-            <div className="step-num">1</div>
-            <div className="step-info">
-              <strong>Student Profile</strong>
-              <span>Academic results & income</span>
-            </div>
-          </Link>
-          <div className="journey-arrow">→</div>
-          <Link to="/scholarships" className="journey-step active">
-            <div className="step-num">2</div>
-            <div className="step-info">
-              <strong>Explore & Filter</strong>
-              <span>Official sources & cycles</span>
-            </div>
-          </Link>
-          <div className="journey-arrow">→</div>
-          <Link to="/scholarships/sch-khazanah-global-2026" className="journey-step">
-            <div className="step-num">3</div>
-            <div className="step-info">
-              <strong>Eligibility & What-If</strong>
-              <span>Rule 2 deterministic logic</span>
-            </div>
-          </Link>
-          <div className="journey-arrow">→</div>
-          <Link to="/applications" className="journey-step">
-            <div className="step-num">4</div>
-            <div className="step-info">
-              <strong>Track & Checklist</strong>
-              <span>Readiness bar & stages</span>
-            </div>
-          </Link>
-          <div className="journey-arrow">→</div>
-          <Link to="/interviews" className="journey-step">
-            <div className="step-num">5</div>
-            <div className="step-info">
-              <strong>Interviews</strong>
-              <span>Conflict & overlap alerts</span>
-            </div>
-          </Link>
-          <div className="journey-arrow">→</div>
-          <Link to="/comparison" className="journey-step">
-            <div className="step-num">6</div>
-            <div className="step-info">
-              <strong>Compare Options</strong>
-              <span>Gap & bond obligations</span>
-            </div>
-          </Link>
-        </div>
-      </Card>
 
       {/* Metrics Grid */}
       <div className="stats-grid">
         <Card>
           <div className="metric-box">
             <div className="metric-icon bg-blue">
-              <Search size={22} />
+              <User size={22} />
             </div>
             <div>
-              <div className="metric-num">{scholarships.length}</div>
-              <div className="metric-title">Monitored Scholarships</div>
-              <span className="metric-subtitle">{eligibleMatches} match recorded criteria</span>
+              <div className="metric-num">{profile ? "Active" : "Incomplete"}</div>
+              <div className="metric-title">Student Profile</div>
+              <span className="metric-subtitle">
+                {profile?.field_of_study || "Add your study details"}
+              </span>
             </div>
           </div>
         </Card>
@@ -235,7 +243,9 @@ export const DashboardPage: React.FC = () => {
               <div className="metric-title">Scheduled Interviews</div>
               <span className="metric-subtitle">
                 {conflicts.length > 0 ? (
-                  <strong style={{ color: "var(--danger)" }}>1 Overlap Alert</strong>
+                  <strong style={{ color: "var(--danger)" }}>
+                    {conflicts.length} Overlap Alert
+                  </strong>
                 ) : (
                   "No timing conflicts"
                 )}
@@ -260,82 +270,102 @@ export const DashboardPage: React.FC = () => {
 
       {/* Main Dashboard Two-Column Section */}
       <div className="dashboard-columns">
-        {/* Left Column: Active Applications & Document Readiness */}
         <div className="dashboard-col-left">
           <Card
             title="My Tracked Applications"
             subtitle="Monitor progress across stages and track required document readiness"
           >
-            <div className="applications-preview-list">
-              {applications.map((app) => {
-                const scholarship = scholarships.find((s) => s.id === app.scholarship_id);
-                const readyDocs = app.checklist.filter((d) => d.is_ready).length;
-                const totalDocs = app.checklist.length;
+            {applications.length === 0 ? (
+              <div className="empty-state-box">
+                <p>You have no saved scholarship applications yet.</p>
+                <Link to="/scholarships" style={{ marginTop: 8, display: "inline-block" }}>
+                  <Button variant="outline" size="sm">
+                    Browse Scholarships
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="applications-preview-list">
+                {applications.map((app) => {
+                  const checklistData = checklistByAppId.get(app.id);
+                  const readyDocs = checklistData?.readiness.ready_count ?? 0;
+                  const totalDocs = checklistData?.readiness.total_required ?? 0;
 
-                return (
-                  <div key={app.id} className="app-preview-card">
-                    <div className="app-preview-header">
-                      <div>
-                        <h4>{scholarship?.title || "Scholarship"}</h4>
-                        <span className="text-muted text-sm">{scholarship?.provider} • Cycle: {scholarship?.application_cycle}</span>
-                      </div>
-                      <StageBadge stage={app.stage} />
-                    </div>
-
-                    <div className="app-preview-body">
-                      <ReadinessBar readyCount={readyDocs} totalCount={totalDocs} />
-                      {app.submission_reference && (
-                        <div className="submission-ref-tag">
-                          <span>Portal Ref: </span>
-                          <code>{app.submission_reference}</code>
+                  return (
+                    <div key={app.id} className="app-preview-card">
+                      <div className="app-preview-header">
+                        <div>
+                          <h4>Scholarship {app.scholarship_id}</h4>
+                          <span className="text-muted text-sm">
+                            Application ID: {app.id}
+                          </span>
                         </div>
-                      )}
-                    </div>
+                        <StageBadge stage={app.stage as ApplicationStage} />
+                      </div>
 
-                    <div className="app-preview-footer">
-                      <Link to={`/scholarships/${app.scholarship_id}`} className="text-link text-sm">
-                        View Criteria & What-If
-                      </Link>
-                      <Link to="/applications">
-                        <Button variant="outline" size="sm">
-                          Board View <ArrowRight size={14} style={{ marginLeft: 4 }} />
-                        </Button>
-                      </Link>
+                      <div className="app-preview-body">
+                        <ReadinessBar readyCount={readyDocs} totalCount={totalDocs} />
+                        {app.submission_reference && (
+                          <div className="submission-ref-tag">
+                            <span>Portal Ref: </span>
+                            <code>{app.submission_reference}</code>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="app-preview-footer">
+                        <Link to={`/scholarships/${app.scholarship_id}`} className="text-link text-sm">
+                          View Criteria
+                        </Link>
+                        <Link to="/applications">
+                          <Button variant="outline" size="sm">
+                            Board View <ArrowRight size={14} style={{ marginLeft: 4 }} />
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </Card>
         </div>
 
-        {/* Right Column: Deadlines, Eligibility Highlights & Quick Actions */}
         <div className="dashboard-col-right">
-          <Card title="Upcoming Official Deadlines" subtitle="Verified from official Malaysian scholarship portals">
-            <div className="deadlines-list">
-              {scholarships.map((sch) => {
-                const evalResult = evaluateEligibility(sch, profile);
-                return (
-                  <div key={sch.id} className="deadline-item">
+          <Card title="Upcoming Interviews" subtitle="Scheduled rounds from your saved applications">
+            {interviews.length === 0 ? (
+              <div className="empty-state-box">
+                <p>No interviews scheduled yet.</p>
+              </div>
+            ) : (
+              <div className="deadlines-list">
+                {interviews.map((interview) => (
+                  <div key={interview.id} className="deadline-item">
                     <div className="deadline-date-box">
-                      <Clock size={16} />
-                      <span>{new Date(sch.deadline).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+                      <Calendar size={16} />
+                      <span>
+                        {new Date(interview.scheduled_at).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                        })}
+                      </span>
                     </div>
                     <div className="deadline-details">
-                      <h5>{sch.title}</h5>
-                      <div className="deadline-meta">
-                        <OverallEligibilityBadge status={evalResult.overall} />
-                      </div>
+                      <h5>{interview.round_name}</h5>
+                      <span className="text-muted text-sm">
+                        Status: {interview.status}
+                        {interview.location_or_link ? ` • ${interview.location_or_link}` : ""}
+                      </span>
                     </div>
-                    <Link to={`/scholarships/${sch.id}`}>
+                    <Link to="/interviews">
                       <Button variant="outline" size="sm">
                         Inspect
                       </Button>
                     </Link>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </Card>
 
           <Card title="Quick Advisory Actions" subtitle="Fast paths for student tasks">
@@ -344,7 +374,7 @@ export const DashboardPage: React.FC = () => {
                 <Search size={18} />
                 <div>
                   <strong>Search & Filter Scholarships</strong>
-                  <span>Browse 2026 cycles with freshness timestamps</span>
+                  <span>Browse cycles with freshness timestamps</span>
                 </div>
               </Link>
               <Link to="/interviews" className="quick-action-btn">

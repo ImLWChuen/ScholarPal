@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   GraduationCap,
   LayoutDashboard,
@@ -9,12 +9,15 @@ import {
   Calendar,
   Scale,
   ShieldCheck,
-  RotateCcw,
+  LogOut,
+  LogIn,
 } from "lucide-react";
-import { resetAllMockData } from "../mock/mockData";
+import { useAuth } from "../features/auth/AuthContext";
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const navLinks = [
     { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -23,14 +26,14 @@ export const Navbar: React.FC = () => {
     { to: "/applications", label: "Applications", icon: KanbanSquare },
     { to: "/interviews", label: "Interviews", icon: Calendar },
     { to: "/comparison", label: "Comparison", icon: Scale },
-    { to: "/admin", label: "Admin Console", icon: ShieldCheck },
+    ...(user?.role === "administrator"
+      ? [{ to: "/admin", label: "Admin Console", icon: ShieldCheck }]
+      : []),
   ];
 
-  const handleResetData = () => {
-    if (window.confirm("Reset all local wireframe data back to default mock state?")) {
-      resetAllMockData();
-      window.location.reload();
-    }
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -39,33 +42,51 @@ export const Navbar: React.FC = () => {
         <Link to="/" className="navbar-brand">
           <GraduationCap className="brand-icon" size={26} />
           <span className="brand-text">ScholarPal</span>
-          <span className="wireframe-pill">Wireframe</span>
         </Link>
         <nav className="navbar-links">
-          {navLinks.map(({ to, label, icon: Icon }) => {
-            const isActive =
-              to === "/"
-                ? location.pathname === "/" || location.pathname === "/dashboard"
-                : location.pathname.startsWith(to);
-            return (
-              <Link
-                key={to}
-                to={to}
-                className={`nav-link ${isActive ? "active" : ""}`}
+          {isAuthenticated ? (
+            <>
+              {navLinks.map(({ to, label, icon: Icon }) => {
+                const isActive =
+                  to === "/"
+                    ? location.pathname === "/" || location.pathname === "/dashboard"
+                    : location.pathname.startsWith(to);
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    className={`nav-link ${isActive ? "active" : ""}`}
+                  >
+                    <Icon size={16} />
+                    <span>{label}</span>
+                  </Link>
+                );
+              })}
+              <span className="nav-user-pill" title={user?.email}>
+                {user?.full_name}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="btn-reset-mock"
+                title="Sign out"
+                type="button"
               >
-                <Icon size={16} />
-                <span>{label}</span>
+                <LogOut size={14} />
+                <span>Sign Out</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="nav-link">
+                <LogIn size={16} />
+                <span>Sign In</span>
               </Link>
-            );
-          })}
-          <button
-            onClick={handleResetData}
-            className="btn-reset-mock"
-            title="Reset mock data to initial baseline"
-          >
-            <RotateCcw size={14} />
-            <span>Reset Demo</span>
-          </button>
+              <Link to="/register" className="nav-link">
+                <User size={16} />
+                <span>Register</span>
+              </Link>
+            </>
+          )}
         </nav>
       </div>
     </header>
